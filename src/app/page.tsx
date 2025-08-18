@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { DeviceManager } from "@/components/device-manager";
 import { Dashboard } from "@/components/dashboard";
 import type { Device, Widget } from "@/lib/types";
@@ -17,15 +17,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Router } from "lucide-react";
 import { AddWidgetSheet } from "@/components/add-widget-sheet";
-import { SheetTrigger } from "@/components/ui/sheet";
 
 export default function Home() {
   const [devices, setDevices] = React.useState<Device[]>(MOCK_DEVICES);
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
   const [data, setData] = React.useState<Record<string, Record<string, number>>>({});
   const [isDeviceManagerOpen, setIsDeviceManagerOpen] = React.useState(false);
-  const [isAddWidgetSheetOpen, setIsAddWidgetSheetOpen] = React.useState(false);
-
 
   const connectedDevices = React.useMemo(() => devices.filter(d => d.connected), [devices]);
 
@@ -75,7 +72,6 @@ export default function Home() {
 
   const handleAddWidget = (widget: Omit<Widget, 'id'>) => {
     setWidgets(prevWidgets => [...prevWidgets, { ...widget, id: `widget-${Date.now()}` }]);
-    setIsAddWidgetSheetOpen(false);
   };
 
   const handleRemoveWidget = (widgetId: string) => {
@@ -85,31 +81,21 @@ export default function Home() {
   return (
     <SidebarProvider>
       <Sidebar side="left" collapsible="offcanvas" className="bg-sidebar">
-        <div className="p-4 border-b">
-            <div className="flex items-center gap-2">
-                <BelIotLogo className="w-8 h-8 text-primary" />
-                <span className="text-xl font-bold">belIOT Menu</span>
-            </div>
-        </div>
-        <div className="flex-1 p-4 space-y-2">
-            <Button variant="outline" className="w-full justify-start" onClick={() => setIsDeviceManagerOpen(true)}>
-            <Router className="mr-2" />
-            Device Manager
-            </Button>
-            <AddWidgetSheet
-              open={isAddWidgetSheetOpen}
-              onOpenChange={setIsAddWidgetSheetOpen}
-              onAddWidget={handleAddWidget}
-              connectedDevices={connectedDevices}
-            >
-              <SheetTrigger asChild>
+          <div className="flex-1 p-4 space-y-2">
+              <Button variant="outline" className="w-full justify-start" onClick={() => setIsDeviceManagerOpen(true)}>
+              <Router className="mr-2" />
+              Device Manager
+              </Button>
+              <AddWidgetSheet
+                onAddWidget={handleAddWidget}
+                connectedDevices={connectedDevices}
+              >
                 <Button className="w-full justify-start">
                     <Plus className="mr-2" />
                     Add Widget
                 </Button>
-              </SheetTrigger>
-            </AddWidgetSheet>
-        </div>
+              </AddWidgetSheet>
+          </div>
       </Sidebar>
       <SidebarInset>
         <Dashboard
@@ -134,3 +120,5 @@ export default function Home() {
     </SidebarProvider>
   );
 }
+
+    
