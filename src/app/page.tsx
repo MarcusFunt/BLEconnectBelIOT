@@ -23,6 +23,7 @@ export default function Home() {
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
   const [data, setData] = React.useState<Record<string, Record<string, number>>>({});
   const [isDeviceManagerOpen, setIsDeviceManagerOpen] = React.useState(false);
+  const [addOpen, setAddOpen] = React.useState(false);
 
   const connectedDevices = React.useMemo(() => devices.filter(d => d.connected), [devices]);
 
@@ -87,6 +88,8 @@ export default function Home() {
               Device Manager
               </Button>
               <AddWidgetSheet
+                open={addOpen}
+                onOpenChange={setAddOpen}
                 onAddWidget={handleAddWidget}
                 connectedDevices={connectedDevices}
               >
