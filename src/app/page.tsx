@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar";
 import { DeviceManager } from "@/components/device-manager";
 import { Dashboard } from "@/components/dashboard";
 import type { Device, Widget } from "@/lib/types";
@@ -14,12 +14,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Plus, Router } from "lucide-react";
+import { AddWidgetSheet } from "@/components/add-widget-sheet";
 
 export default function Home() {
   const [devices, setDevices] = React.useState<Device[]>(MOCK_DEVICES);
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
   const [data, setData] = React.useState<Record<string, Record<string, number>>>({});
   const [isDeviceManagerOpen, setIsDeviceManagerOpen] = React.useState(false);
+  const [isAddWidgetSheetOpen, setIsAddWidgetSheetOpen] = React.useState(false);
+
 
   const connectedDevices = React.useMemo(() => devices.filter(d => d.connected), [devices]);
 
@@ -69,6 +74,7 @@ export default function Home() {
 
   const handleAddWidget = (widget: Omit<Widget, 'id'>) => {
     setWidgets(prevWidgets => [...prevWidgets, { ...widget, id: `widget-${Date.now()}` }]);
+    setIsAddWidgetSheetOpen(false);
   };
 
   const handleRemoveWidget = (widgetId: string) => {
@@ -77,12 +83,29 @@ export default function Home() {
 
   return (
     <SidebarProvider>
-      <Sidebar side="left" collapsible="icon" className="bg-sidebar">
+      <Sidebar side="left" collapsible="offcanvas" className="bg-sidebar">
         <div className="flex flex-col h-full">
-            <div className="p-4 flex items-center gap-2">
-                <BelIotLogo className="w-8 h-8 text-primary" />
-                <h1 className="text-xl font-bold group-data-[collapsible=icon]:hidden">belIOT</h1>
-            </div>
+          <div className="p-4 flex items-center gap-2">
+            <BelIotLogo className="w-8 h-8 text-primary" />
+            <h1 className="text-xl font-bold">belIOT Menu</h1>
+          </div>
+          <div className="flex-1 p-4 space-y-2">
+             <Button variant="outline" className="w-full justify-start" onClick={() => setIsDeviceManagerOpen(true)}>
+              <Router className="mr-2" />
+              Device Manager
+            </Button>
+             <AddWidgetSheet
+              open={isAddWidgetSheetOpen}
+              onOpenChange={setIsAddWidgetSheetOpen}
+              onAddWidget={handleAddWidget}
+              connectedDevices={connectedDevices}
+            >
+              <Button className="w-full justify-start">
+                <Plus className="mr-2" />
+                Add Widget
+              </Button>
+            </AddWidgetSheet>
+          </div>
         </div>
       </Sidebar>
       <SidebarInset>
@@ -90,10 +113,7 @@ export default function Home() {
             widgets={widgets}
             devices={devices}
             data={data}
-            onAddWidget={handleAddWidget}
             onRemoveWidget={handleRemoveWidget}
-            connectedDevices={connectedDevices}
-            onOpenDeviceManager={() => setIsDeviceManagerOpen(true)}
         />
       </SidebarInset>
       <Dialog open={isDeviceManagerOpen} onOpenChange={setIsDeviceManagerOpen}>
