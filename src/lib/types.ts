@@ -5,6 +5,7 @@ export type Device = {
   rssi: number;
   connected: boolean;
   customName?: string;
+  device: BluetoothDevice;
 };
 
 export type WidgetType = 'value' | 'gauge';

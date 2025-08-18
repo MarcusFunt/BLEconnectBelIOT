@@ -6,7 +6,6 @@ import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar"
 import { DeviceManager } from "@/components/device-manager";
 import { Dashboard } from "@/components/dashboard";
 import type { Device, Widget } from "@/lib/types";
-import { MOCK_DEVICES } from "@/lib/mock-data";
 import {
   Dialog,
   DialogContent,
@@ -16,9 +15,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Router } from "lucide-react";
 import { AddWidgetSheet } from "@/components/add-widget-sheet";
+import { useBluetooth } from "@/hooks/use-bluetooth";
 
 export default function Home() {
-  const [devices, setDevices] = React.useState<Device[]>(MOCK_DEVICES);
+  const { 
+    devices, 
+    requestDevice, 
+    connectDevice, 
+    disconnectDevice 
+  } = useBluetooth();
+  
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
   const [data, setData] = React.useState<Record<string, Record<string, number>>>({});
   const [isDeviceManagerOpen, setIsDeviceManagerOpen] = React.useState(false);
@@ -55,19 +61,19 @@ export default function Home() {
   }, [devices]);
 
   const handleConnectToggle = (deviceId: string) => {
-    setDevices(prevDevices =>
-      prevDevices.map(device =>
-        device.id === deviceId ? { ...device, connected: !device.connected } : device
-      )
-    );
+    const device = devices.find(d => d.id === deviceId);
+    if (!device) return;
+
+    if (device.connected) {
+      disconnectDevice(deviceId);
+    } else {
+      connectDevice(deviceId);
+    }
   };
 
   const handleRenameDevice = (deviceId: string, newName: string) => {
-    setDevices(prevDevices =>
-      prevDevices.map(device =>
-        device.id === deviceId ? { ...device, customName: newName } : device
-      )
-    );
+    // This functionality is not yet implemented with the Web Bluetooth API
+    console.log("Renaming device", deviceId, newName);
   };
 
   const handleAddWidget = (widget: Omit<Widget, 'id'>) => {
@@ -87,17 +93,10 @@ export default function Home() {
               <Router className="mr-2" />
               Device Manager
               </Button>
-              <AddWidgetSheet
-                open={isAddWidgetSheetOpen}
-                onOpenChange={setIsAddWidgetSheetOpen}
-                onAddWidget={handleAddWidget}
-                connectedDevices={connectedDevices}
-              >
-                <Button className="w-full justify-start" onClick={() => setIsAddWidgetSheetOpen(true)}>
-                    <Plus className="mr-2" />
-                    Add Widget
-                </Button>
-              </AddWidgetSheet>
+              <Button className="w-full justify-start" onClick={() => setIsAddWidgetSheetOpen(true)}>
+                  <Plus className="mr-2" />
+                  Add Widget
+              </Button>
           </div>
       </Sidebar>
       <SidebarInset>
@@ -116,10 +115,17 @@ export default function Home() {
           <DeviceManager 
               devices={devices} 
               onConnectToggle={handleConnectToggle} 
-              onRenameDevice={handleRenameDevice} 
+              onRenameDevice={handleRenameDevice}
+              onScan={requestDevice}
           />
         </DialogContent>
       </Dialog>
+       <AddWidgetSheet
+          open={isAddWidgetSheetOpen}
+          onOpenChange={setIsAddWidgetSheetOpen}
+          onAddWidget={handleAddWidget}
+          connectedDevices={connectedDevices}
+        />
     </SidebarProvider>
   );
 }
