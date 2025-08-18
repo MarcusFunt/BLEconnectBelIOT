@@ -12,13 +12,9 @@ export const BelIotLogo = (props: React.SVGProps<SVGSVGElement>) => (
     strokeLinejoin="round"
     {...props}
   >
-    <path d="M13 8a2 2 0 0 1-2-2 2 2 0 0 1-2-2" />
-    <path d="M13 18a2 2 0 0 0-2 2 2 2 0 0 0-2 2" />
-    <path d="M13 12a2 2 0 0 0-2 2 2 2 0 0 1-2 2" />
-    <path d="M6 8.5V12v3.5" />
-    <path d="M9 5.5V12v6.5" />
-    <path d="M17 12h.01" />
-    <path d="M19.5 12h.01" />
-    <path d="M22 12h.01" />
+    <path d="M14.5 16.5a2.5 2.5 0 0 1-2.5 2.5H6.5a4 4 0 0 1-4-4v-6a4 4 0 0 1 4-4h5.5a2.5 2.5 0 0 1 2.5 2.5" />
+    <path d="M14.5 11.5a2.5 2.5 0 0 1 0 5" />
+    <path d="M18 12h.01" />
+    <path d="M21 12h.01" />
   </svg>
 );
