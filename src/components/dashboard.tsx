@@ -26,7 +26,7 @@ export function Dashboard({ widgets, devices, data, onRemoveWidget }: DashboardP
       <header className="flex items-center justify-between p-4 border-b shrink-0 md:justify-start md:gap-4">
         <SidebarTrigger/>
         <div className="flex items-center gap-2">
-          <BelIotLogo className="w-6 h-6 text-primary md:hidden" />
+          <BelIotLogo className="w-6 h-6 text-primary" />
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         </div>
       </header>
