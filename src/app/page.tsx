@@ -2,12 +2,11 @@
 "use client";
 
 import * as React from "react";
-import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar";
 import { DeviceManager } from "@/components/device-manager";
 import { Dashboard } from "@/components/dashboard";
 import type { Device, Widget } from "@/lib/types";
 import { MOCK_DEVICES } from "@/lib/mock-data";
-import { BelIotLogo } from "@/components/icons";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +22,7 @@ export default function Home() {
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
   const [data, setData] = React.useState<Record<string, Record<string, number>>>({});
   const [isDeviceManagerOpen, setIsDeviceManagerOpen] = React.useState(false);
+  const [isAddWidgetSheetOpen, setIsAddWidgetSheetOpen] = React.useState(false);
 
   const connectedDevices = React.useMemo(() => devices.filter(d => d.connected), [devices]);
 
@@ -72,6 +72,7 @@ export default function Home() {
 
   const handleAddWidget = (widget: Omit<Widget, 'id'>) => {
     setWidgets(prevWidgets => [...prevWidgets, { ...widget, id: `widget-${Date.now()}` }]);
+    setIsAddWidgetSheetOpen(false);
   };
 
   const handleRemoveWidget = (widgetId: string) => {
@@ -87,10 +88,12 @@ export default function Home() {
               Device Manager
               </Button>
               <AddWidgetSheet
+                open={isAddWidgetSheetOpen}
+                onOpenChange={setIsAddWidgetSheetOpen}
                 onAddWidget={handleAddWidget}
                 connectedDevices={connectedDevices}
               >
-                <Button className="w-full justify-start">
+                <Button className="w-full justify-start" onClick={() => setIsAddWidgetSheetOpen(true)}>
                     <Plus className="mr-2" />
                     Add Widget
                 </Button>
@@ -120,5 +123,3 @@ export default function Home() {
     </SidebarProvider>
   );
 }
-
-    

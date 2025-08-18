@@ -8,6 +8,7 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,9 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      {children}
+      <SheetTrigger asChild>
+        {children}
+      </SheetTrigger>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>Add a new widget</SheetTitle>
