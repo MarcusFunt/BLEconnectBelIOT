@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bluetooth, BluetoothConnected, Edit, Check, X, Signal, Rssi } from "lucide-react";
+import { Bluetooth, BluetoothConnected, Edit, Check, X, Signal, Rss } from "lucide-react";
 
 interface DeviceManagerProps {
   devices: Device[];
@@ -40,7 +40,7 @@ export function DeviceManager({ devices, onConnectToggle, onRenameDevice }: Devi
   const getRssiIcon = (rssi: number) => {
     if (rssi > -60) return <Signal className="w-4 h-4 text-green-500" />;
     if (rssi > -80) return <Signal className="w-4 h-4 text-yellow-500" />;
-    return <Rssi className="w-4 h-4 text-red-500" />;
+    return <Rss className="w-4 h-4 text-red-500" />;
   }
 
   return (
