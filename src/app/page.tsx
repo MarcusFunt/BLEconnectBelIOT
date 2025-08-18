@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Router } from "lucide-react";
 import { AddWidgetSheet } from "@/components/add-widget-sheet";
+import { SheetTrigger } from "@/components/ui/sheet";
 
 export default function Home() {
   const [devices, setDevices] = React.useState<Device[]>(MOCK_DEVICES);
@@ -84,28 +85,30 @@ export default function Home() {
   return (
     <SidebarProvider>
       <Sidebar side="left" collapsible="offcanvas" className="bg-sidebar">
-        <div className="flex flex-col h-full">
-          <div className="p-4 flex items-center gap-2">
-            <BelIotLogo className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-bold">belIOT Menu</h1>
-          </div>
-          <div className="flex-1 p-4 space-y-2">
-             <Button variant="outline" className="w-full justify-start" onClick={() => setIsDeviceManagerOpen(true)}>
-              <Router className="mr-2" />
-              Device Manager
+        <div className="p-4 border-b">
+            <div className="flex items-center gap-2">
+                <BelIotLogo className="w-8 h-8 text-primary" />
+                <span className="text-xl font-bold">belIOT Menu</span>
+            </div>
+        </div>
+        <div className="flex-1 p-4 space-y-2">
+            <Button variant="outline" className="w-full justify-start" onClick={() => setIsDeviceManagerOpen(true)}>
+            <Router className="mr-2" />
+            Device Manager
             </Button>
-             <AddWidgetSheet
+            <AddWidgetSheet
               open={isAddWidgetSheetOpen}
               onOpenChange={setIsAddWidgetSheetOpen}
               onAddWidget={handleAddWidget}
               connectedDevices={connectedDevices}
             >
-              <Button className="w-full justify-start">
-                <Plus className="mr-2" />
-                Add Widget
-              </Button>
+              <SheetTrigger asChild>
+                <Button className="w-full justify-start">
+                    <Plus className="mr-2" />
+                    Add Widget
+                </Button>
+              </SheetTrigger>
             </AddWidgetSheet>
-          </div>
         </div>
       </Sidebar>
       <SidebarInset>
