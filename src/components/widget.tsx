@@ -33,7 +33,18 @@ const getUnit = (dataType: WidgetType['dataType']) => {
 export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
   const unit = getUnit(widget.dataType);
   const displayValue = data !== undefined ? data.toFixed(1) : '--';
-  const progressValue = data !== undefined ? data : 0;
+  const normalizeValue = (value: number, dataType: WidgetType['dataType']) => {
+    const ranges: Record<WidgetType['dataType'], { min: number; max: number }> = {
+      temperature: { min: -10, max: 50 },
+      humidity: { min: 0, max: 100 },
+      battery: { min: 0, max: 100 },
+    };
+    const range = ranges[dataType] ?? { min: 0, max: 100 };
+    const clamped = Math.min(Math.max(value, range.min), range.max);
+    return ((clamped - range.min) / (range.max - range.min)) * 100;
+  };
+  const progressValue =
+    data !== undefined ? normalizeValue(data, widget.dataType) : 0;
   
   const formattedDataType = widget.dataType.charAt(0).toUpperCase() + widget.dataType.slice(1);
 
