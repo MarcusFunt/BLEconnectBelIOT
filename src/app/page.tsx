@@ -8,11 +8,18 @@ import { Dashboard } from "@/components/dashboard";
 import type { Device, Widget } from "@/lib/types";
 import { MOCK_DEVICES } from "@/lib/mock-data";
 import { BelIotLogo } from "@/components/icons";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function Home() {
   const [devices, setDevices] = React.useState<Device[]>(MOCK_DEVICES);
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
   const [data, setData] = React.useState<Record<string, Record<string, number>>>({});
+  const [isDeviceManagerOpen, setIsDeviceManagerOpen] = React.useState(false);
 
   const connectedDevices = React.useMemo(() => devices.filter(d => d.connected), [devices]);
 
@@ -76,11 +83,6 @@ export default function Home() {
                 <BelIotLogo className="w-8 h-8 text-primary" />
                 <h1 className="text-xl font-bold group-data-[collapsible=icon]:hidden">belIOT</h1>
             </div>
-            <DeviceManager 
-                devices={devices} 
-                onConnectToggle={handleConnectToggle} 
-                onRenameDevice={handleRenameDevice} 
-            />
         </div>
       </Sidebar>
       <SidebarInset>
@@ -91,8 +93,21 @@ export default function Home() {
             onAddWidget={handleAddWidget}
             onRemoveWidget={handleRemoveWidget}
             connectedDevices={connectedDevices}
+            onOpenDeviceManager={() => setIsDeviceManagerOpen(true)}
         />
       </SidebarInset>
+      <Dialog open={isDeviceManagerOpen} onOpenChange={setIsDeviceManagerOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Device Manager</DialogTitle>
+          </DialogHeader>
+          <DeviceManager 
+              devices={devices} 
+              onConnectToggle={handleConnectToggle} 
+              onRenameDevice={handleRenameDevice} 
+          />
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }

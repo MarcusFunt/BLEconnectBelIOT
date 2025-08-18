@@ -44,19 +44,18 @@ export function DeviceManager({ devices, onConnectToggle, onRenameDevice }: Devi
   }
 
   return (
-    <ScrollArea className="flex-1 p-2">
-      <div className="space-y-2 group-data-[collapsible=icon]:px-0 px-2">
-          <h2 className="text-sm font-semibold text-muted-foreground group-data-[collapsible=icon]:text-center">Devices</h2>
+    <ScrollArea className="flex-1 p-2 max-h-[60vh]">
+      <div className="space-y-2 px-2">
           <ul className="space-y-2">
             {devices.map(device => (
-              <li key={device.id} className="p-2 rounded-md hover:bg-sidebar-accent">
+              <li key={device.id} className="p-2 rounded-md hover:bg-accent">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         {device.connected ? 
                             <BluetoothConnected className="w-5 h-5 text-primary" /> : 
                             <Bluetooth className="w-5 h-5 text-muted-foreground" />
                         }
-                        <div className="group-data-[collapsible=icon]:hidden">
+                        <div>
                             {editingDeviceId === device.id ? (
                                 <Input 
                                     value={tempName} 
@@ -72,7 +71,7 @@ export function DeviceManager({ devices, onConnectToggle, onRenameDevice }: Devi
                             )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">
+                    <div className="flex items-center gap-1">
                         {editingDeviceId === device.id ? (
                             <>
                                 <Button size="icon" variant="ghost" className="w-7 h-7" onClick={handleEditSave}><Check className="w-4 h-4" /></Button>
