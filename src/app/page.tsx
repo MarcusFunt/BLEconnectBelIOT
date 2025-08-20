@@ -16,15 +16,18 @@ import { Button } from "@/components/ui/button";
 import { Plus, Router } from "lucide-react";
 import { AddWidgetSheet } from "@/components/add-widget-sheet";
 import { useBluetooth } from "@/hooks/use-bluetooth";
+import type { WidgetDataType } from "@/lib/types";
 
 export default function Home() {
-  const { 
-    devices, 
-    requestDevice, 
-    connectDevice, 
-    disconnectDevice 
+  const {
+    devices,
+    requestDevice,
+    connectDevice,
+    disconnectDevice,
+    readCharacteristicValue,
+    renameDevice,
   } = useBluetooth();
-  
+
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
   const [data, setData] = React.useState<Record<string, Record<string, number>>>({});
   const [isDeviceManagerOpen, setIsDeviceManagerOpen] = React.useState(false);
@@ -35,6 +38,7 @@ export default function Home() {
   const readValues = React.useCallback(
     async (targets: Device[] = connectedDevices) => {
       const devicePromises = targets.map(async device => {
+
         const server = device.device.gatt;
         if (!server) return;
         if (!server.connected) {
@@ -88,20 +92,25 @@ export default function Home() {
               console.error(`Humidity read failed for ${device.name}`, err);
             }
           })()
-        );
+
 
         await Promise.all(characteristicPromises);
 
-        setData(prev => {
-          const updated = { ...prev };
-          updated[device.id] = { ...(prev[device.id] ?? {}), ...values };
-          return updated;
-        });
+
+        if (Object.keys(updates).length) {
+          setData(prev => ({
+            ...prev,
+            [device.id]: { ...(prev[device.id] ?? {}), ...updates },
+          }));
+        }
+
       });
 
       await Promise.all(devicePromises);
     },
-    [connectedDevices]
+
+    [connectedDevices, readCharacteristicValue]
+
   );
 
   React.useEffect(() => {
@@ -131,8 +140,7 @@ export default function Home() {
   };
 
   const handleRenameDevice = (deviceId: string, newName: string) => {
-    // This functionality is not yet implemented with the Web Bluetooth API
-    console.log("Renaming device", deviceId, newName);
+    renameDevice(deviceId, newName);
   };
 
   const handleAddWidget = (widget: Omit<Widget, 'id'>) => {
@@ -171,9 +179,9 @@ export default function Home() {
           <DialogHeader>
             <DialogTitle>Device Manager</DialogTitle>
           </DialogHeader>
-          <DeviceManager 
-              devices={devices} 
-              onConnectToggle={handleConnectToggle} 
+          <DeviceManager
+              devices={devices}
+              onConnectToggle={handleConnectToggle}
               onRenameDevice={handleRenameDevice}
               onScan={requestDevice}
           />
