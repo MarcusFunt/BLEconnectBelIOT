@@ -38,21 +38,64 @@ export default function Home() {
   const readValues = React.useCallback(
     async (targets: Device[] = connectedDevices) => {
       const devicePromises = targets.map(async device => {
-        if (!device.connected || !device.characteristics) return;
 
-        const updates: Record<string, number> = {};
-        const characteristicPromises = (Object.keys(device.characteristics) as WidgetDataType[]).map(
-          async dataType => {
-            try {
-              const value = await readCharacteristicValue(device.id, dataType);
-              if (value !== null) updates[dataType] = value;
-            } catch (err) {
-              console.error(`Read failed for ${dataType} on ${device.name}`, err);
-            }
+        const server = device.device.gatt;
+        if (!server) return;
+        if (!server.connected) {
+          try {
+            await server.connect();
+          } catch (err) {
+            console.error(`Failed to connect to ${device.name}:`, err);
+            return;
           }
+        }
+
+        const values: Record<string, number> = {};
+
+        const characteristicPromises: Promise<void>[] = [];
+
+        characteristicPromises.push(
+          (async () => {
+            try {
+              const service = await server.getPrimaryService("battery_service");
+              const characteristic = await service.getCharacteristic("battery_level");
+              const value = await characteristic.readValue();
+              values.battery = value.getUint8(0);
+            } catch (err) {
+              console.error(`Battery read failed for ${device.name}`, err);
+            }
+          })()
         );
 
+        characteristicPromises.push(
+          (async () => {
+            try {
+              const service = await server.getPrimaryService("health_thermometer");
+              const characteristic = await service.getCharacteristic("temperature_measurement");
+              const value = await characteristic.readValue();
+              const temp = value.getFloat32(0, true);
+              values.temperature = Math.round(temp * 10) / 10;
+            } catch (err) {
+              console.error(`Temperature read failed for ${device.name}`, err);
+            }
+          })()
+        );
+
+        characteristicPromises.push(
+          (async () => {
+            try {
+              const service = await server.getPrimaryService("environmental_sensing");
+              const characteristic = await service.getCharacteristic("humidity");
+              const value = await characteristic.readValue();
+              values.humidity = value.getUint8(0);
+            } catch (err) {
+              console.error(`Humidity read failed for ${device.name}`, err);
+            }
+          })()
+
+
         await Promise.all(characteristicPromises);
+
 
         if (Object.keys(updates).length) {
           setData(prev => ({
@@ -60,11 +103,14 @@ export default function Home() {
             [device.id]: { ...(prev[device.id] ?? {}), ...updates },
           }));
         }
+
       });
 
       await Promise.all(devicePromises);
     },
+
     [connectedDevices, readCharacteristicValue]
+
   );
 
   React.useEffect(() => {
