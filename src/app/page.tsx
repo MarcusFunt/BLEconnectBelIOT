@@ -32,33 +32,92 @@ export default function Home() {
 
   const connectedDevices = React.useMemo(() => devices.filter(d => d.connected), [devices]);
 
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setData(currentData => {
-        const newData = { ...currentData };
-        devices.forEach(device => {
-          if (device.connected) {
-            if (!newData[device.id]) newData[device.id] = {};
-            
-            const tempChange = (Math.random() - 0.5) * 0.5;
-            const humidChange = (Math.random() - 0.5) * 1;
-            const batteryDrain = Math.random() * 0.05;
-
-            const currentTemp = newData[device.id].temperature || 21;
-            const currentHumid = newData[device.id].humidity || 55;
-            const currentBattery = newData[device.id].battery ?? 100;
-
-            newData[device.id].temperature = Math.round((currentTemp + tempChange) * 10) / 10;
-            newData[device.id].humidity = Math.max(0, Math.min(100, Math.round((currentHumid + humidChange) * 10) / 10));
-            newData[device.id].battery = Math.max(0, currentBattery - batteryDrain);
+  const readValues = React.useCallback(
+    async (targets: Device[] = connectedDevices) => {
+      const devicePromises = targets.map(async device => {
+        const server = device.device.gatt;
+        if (!server) return;
+        if (!server.connected) {
+          try {
+            await server.connect();
+          } catch (err) {
+            console.error(`Failed to connect to ${device.name}:`, err);
+            return;
           }
-        });
-        return newData;
-      });
-    }, 2000);
+        }
 
-    return () => clearInterval(interval);
-  }, [devices]);
+        const values: Record<string, number> = {};
+
+        const characteristicPromises: Promise<void>[] = [];
+
+        characteristicPromises.push(
+          (async () => {
+            try {
+              const service = await server.getPrimaryService("battery_service");
+              const characteristic = await service.getCharacteristic("battery_level");
+              const value = await characteristic.readValue();
+              values.battery = value.getUint8(0);
+            } catch (err) {
+              console.error(`Battery read failed for ${device.name}`, err);
+            }
+          })()
+        );
+
+        characteristicPromises.push(
+          (async () => {
+            try {
+              const service = await server.getPrimaryService("health_thermometer");
+              const characteristic = await service.getCharacteristic("temperature_measurement");
+              const value = await characteristic.readValue();
+              const temp = value.getFloat32(0, true);
+              values.temperature = Math.round(temp * 10) / 10;
+            } catch (err) {
+              console.error(`Temperature read failed for ${device.name}`, err);
+            }
+          })()
+        );
+
+        characteristicPromises.push(
+          (async () => {
+            try {
+              const service = await server.getPrimaryService("environmental_sensing");
+              const characteristic = await service.getCharacteristic("humidity");
+              const value = await characteristic.readValue();
+              values.humidity = value.getUint8(0);
+            } catch (err) {
+              console.error(`Humidity read failed for ${device.name}`, err);
+            }
+          })()
+        );
+
+        await Promise.all(characteristicPromises);
+
+        setData(prev => {
+          const updated = { ...prev };
+          updated[device.id] = { ...(prev[device.id] ?? {}), ...values };
+          return updated;
+        });
+      });
+
+      await Promise.all(devicePromises);
+    },
+    [connectedDevices]
+  );
+
+  React.useEffect(() => {
+    const timers = connectedDevices.map(device =>
+      setInterval(() => {
+        readValues([device]);
+      }, 2000)
+    );
+
+    // In a production application, characteristic notifications could
+    // replace polling or the interval durations could vary per device.
+
+    return () => {
+      timers.forEach(clearInterval);
+    };
+  }, [connectedDevices, readValues]);
 
   const handleConnectToggle = (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);
@@ -125,7 +184,9 @@ export default function Home() {
           onOpenChange={setIsAddWidgetSheetOpen}
           onAddWidget={handleAddWidget}
           connectedDevices={connectedDevices}
-        />
+        >
+          {null}
+        </AddWidgetSheet>
     </SidebarProvider>
   );
 }
