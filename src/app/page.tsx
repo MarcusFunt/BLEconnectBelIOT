@@ -27,7 +27,7 @@ export default function Home() {
     readCharacteristicValue,
     renameDevice,
   } = useBluetooth();
-  
+
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
   const [data, setData] = React.useState<Record<string, Record<string, number>>>({});
   const [isDeviceManagerOpen, setIsDeviceManagerOpen] = React.useState(false);
@@ -35,27 +35,52 @@ export default function Home() {
 
   const connectedDevices = React.useMemo(() => devices.filter(d => d.connected), [devices]);
 
-  React.useEffect(() => {
-    const readValues = async () => {
-      for (const device of devices) {
-        if (!device.connected || !device.characteristics) continue;
+  const readValues = React.useCallback(
+    async (targets: Device[] = connectedDevices) => {
+      const devicePromises = targets.map(async device => {
+        if (!device.connected || !device.characteristics) return;
+
         const updates: Record<string, number> = {};
-        for (const dataType of Object.keys(device.characteristics) as WidgetDataType[]) {
-          const value = await readCharacteristicValue(device.id, dataType);
-          if (value !== null) updates[dataType] = value;
-        }
+        const characteristicPromises = (Object.keys(device.characteristics) as WidgetDataType[]).map(
+          async dataType => {
+            try {
+              const value = await readCharacteristicValue(device.id, dataType);
+              if (value !== null) updates[dataType] = value;
+            } catch (err) {
+              console.error(`Read failed for ${dataType} on ${device.name}`, err);
+            }
+          }
+        );
+
+        await Promise.all(characteristicPromises);
+
         if (Object.keys(updates).length) {
           setData(prev => ({
             ...prev,
-            [device.id]: { ...(prev[device.id] || {}), ...updates },
+            [device.id]: { ...(prev[device.id] ?? {}), ...updates },
           }));
         }
-      }
+      });
+
+      await Promise.all(devicePromises);
+    },
+    [connectedDevices, readCharacteristicValue]
+  );
+
+  React.useEffect(() => {
+    const timers = connectedDevices.map(device =>
+      setInterval(() => {
+        readValues([device]);
+      }, 2000)
+    );
+
+    // In a production application, characteristic notifications could
+    // replace polling or the interval durations could vary per device.
+
+    return () => {
+      timers.forEach(clearInterval);
     };
-    readValues();
-    const interval = setInterval(readValues, 2000);
-    return () => clearInterval(interval);
-  }, [devices, readCharacteristicValue]);
+  }, [connectedDevices, readValues]);
 
   const handleConnectToggle = (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);
@@ -108,9 +133,9 @@ export default function Home() {
           <DialogHeader>
             <DialogTitle>Device Manager</DialogTitle>
           </DialogHeader>
-          <DeviceManager 
-              devices={devices} 
-              onConnectToggle={handleConnectToggle} 
+          <DeviceManager
+              devices={devices}
+              onConnectToggle={handleConnectToggle}
               onRenameDevice={handleRenameDevice}
               onScan={requestDevice}
           />
@@ -121,7 +146,9 @@ export default function Home() {
           onOpenChange={setIsAddWidgetSheetOpen}
           onAddWidget={handleAddWidget}
           connectedDevices={connectedDevices}
-        />
+        >
+          {null}
+        </AddWidgetSheet>
     </SidebarProvider>
   );
 }
