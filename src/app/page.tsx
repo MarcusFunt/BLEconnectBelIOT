@@ -19,14 +19,13 @@ import { useBluetooth } from "@/hooks/use-bluetooth";
 import type { WidgetDataType } from "@/lib/types";
 
 export default function Home() {
-  const {
-    devices,
-    requestDevice,
-    connectDevice,
-    disconnectDevice,
-    readCharacteristicValue,
-    renameDevice,
-  } = useBluetooth();
+    const {
+      devices,
+      requestDevice,
+      connectDevice,
+      disconnectDevice,
+      renameDevice,
+    } = useBluetooth();
 
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
   const [data, setData] = React.useState<Record<string, Record<string, number>>>({});
@@ -92,15 +91,14 @@ export default function Home() {
               console.error(`Humidity read failed for ${device.name}`, err);
             }
           })()
-
+        );
 
         await Promise.all(characteristicPromises);
 
-
-        if (Object.keys(updates).length) {
+        if (Object.keys(values).length) {
           setData(prev => ({
             ...prev,
-            [device.id]: { ...(prev[device.id] ?? {}), ...updates },
+            [device.id]: { ...(prev[device.id] ?? {}), ...values },
           }));
         }
 
@@ -109,7 +107,7 @@ export default function Home() {
       await Promise.all(devicePromises);
     },
 
-    [connectedDevices, readCharacteristicValue]
+    [connectedDevices]
 
   );
 
