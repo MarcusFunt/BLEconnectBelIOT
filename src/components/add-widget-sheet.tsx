@@ -23,7 +23,7 @@ import type { Device, Widget } from "@/lib/types";
 import { widgetDataTypes } from "@/lib/types";
 
 interface AddWidgetSheetProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddWidget: (widget: Omit<Widget, 'id'>) => void;
@@ -55,9 +55,11 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger asChild>
-        {children}
-      </SheetTrigger>
+      {children && (
+        <SheetTrigger asChild>
+          {children}
+        </SheetTrigger>
+      )}
       <SheetContent>
         <SheetHeader>
           <SheetTitle>Add a new widget</SheetTitle>
@@ -119,9 +121,11 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="temperature">Temperature</SelectItem>
-                      <SelectItem value="humidity">Humidity</SelectItem>
-                      <SelectItem value="battery">Battery</SelectItem>
+                      {widgetDataTypes.map(type => (
+                        <SelectItem key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

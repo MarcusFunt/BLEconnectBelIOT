@@ -16,13 +16,16 @@ import { Button } from "@/components/ui/button";
 import { Plus, Router } from "lucide-react";
 import { AddWidgetSheet } from "@/components/add-widget-sheet";
 import { useBluetooth } from "@/hooks/use-bluetooth";
+import type { WidgetDataType } from "@/lib/types";
 
 export default function Home() {
-  const { 
-    devices, 
-    requestDevice, 
-    connectDevice, 
-    disconnectDevice 
+  const {
+    devices,
+    requestDevice,
+    connectDevice,
+    disconnectDevice,
+    readCharacteristicValue,
+    renameDevice,
   } = useBluetooth();
   
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
@@ -33,32 +36,26 @@ export default function Home() {
   const connectedDevices = React.useMemo(() => devices.filter(d => d.connected), [devices]);
 
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      setData(currentData => {
-        const newData = { ...currentData };
-        devices.forEach(device => {
-          if (device.connected) {
-            if (!newData[device.id]) newData[device.id] = {};
-            
-            const tempChange = (Math.random() - 0.5) * 0.5;
-            const humidChange = (Math.random() - 0.5) * 1;
-            const batteryDrain = Math.random() * 0.05;
-
-            const currentTemp = newData[device.id].temperature || 21;
-            const currentHumid = newData[device.id].humidity || 55;
-            const currentBattery = newData[device.id].battery ?? 100;
-
-            newData[device.id].temperature = Math.round((currentTemp + tempChange) * 10) / 10;
-            newData[device.id].humidity = Math.max(0, Math.min(100, Math.round((currentHumid + humidChange) * 10) / 10));
-            newData[device.id].battery = Math.max(0, currentBattery - batteryDrain);
-          }
-        });
-        return newData;
-      });
-    }, 2000);
-
+    const readValues = async () => {
+      for (const device of devices) {
+        if (!device.connected || !device.characteristics) continue;
+        const updates: Record<string, number> = {};
+        for (const dataType of Object.keys(device.characteristics) as WidgetDataType[]) {
+          const value = await readCharacteristicValue(device.id, dataType);
+          if (value !== null) updates[dataType] = value;
+        }
+        if (Object.keys(updates).length) {
+          setData(prev => ({
+            ...prev,
+            [device.id]: { ...(prev[device.id] || {}), ...updates },
+          }));
+        }
+      }
+    };
+    readValues();
+    const interval = setInterval(readValues, 2000);
     return () => clearInterval(interval);
-  }, [devices]);
+  }, [devices, readCharacteristicValue]);
 
   const handleConnectToggle = (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);
@@ -72,8 +69,7 @@ export default function Home() {
   };
 
   const handleRenameDevice = (deviceId: string, newName: string) => {
-    // This functionality is not yet implemented with the Web Bluetooth API
-    console.log("Renaming device", deviceId, newName);
+    renameDevice(deviceId, newName);
   };
 
   const handleAddWidget = (widget: Omit<Widget, 'id'>) => {

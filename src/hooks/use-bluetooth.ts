@@ -2,8 +2,15 @@
 "use client";
 
 import { useState, useCallback } from 'react';
-import type { Device } from '@/lib/types';
+import type { Device, WidgetDataType } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
+import {
+  characteristicUUIDToDataType,
+  parseCharacteristicValue,
+  COMPATIBLE_MANUFACTURER_ID,
+  COMPATIBLE_MANUFACTURER_DATA_PREFIX,
+  KNOWN_SERVICE_UUIDS,
+} from "@/lib/bluetooth";
 
 export function useBluetooth() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -11,17 +18,41 @@ export function useBluetooth() {
 
   const requestDevice = useCallback(async () => {
     try {
-      if (typeof navigator === 'undefined' || !navigator.bluetooth) {
+      if (typeof navigator === 'undefined' || !(navigator as any).bluetooth) {
         throw new Error('Web Bluetooth API is not available in this browser.');
       }
       
       console.log('Requesting Bluetooth device...');
-      const bleDevice = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: ['battery_service', 'health_thermometer', 'environmental_sensing'],
+      const bleDevice = await (navigator as any).bluetooth.requestDevice({
+        filters: [
+          {
+            manufacturerData: [
+              {
+                companyIdentifier: COMPATIBLE_MANUFACTURER_ID,
+                dataPrefix: COMPATIBLE_MANUFACTURER_DATA_PREFIX,
+              },
+            ],
+          },
+        ],
+        optionalServices: [...KNOWN_SERVICE_UUIDS],
       });
-      
+
       console.log('Device found:', bleDevice);
+
+      try {
+        await bleDevice.watchAdvertisements();
+        bleDevice.addEventListener('advertisementreceived', (event: any) => {
+          if (typeof event.rssi === 'number') {
+            setDevices(prev =>
+              prev.map(d =>
+                d.id === bleDevice.id ? { ...d, rssi: event.rssi } : d
+              )
+            );
+          }
+        });
+      } catch (err) {
+        console.warn('Advertisement watching not supported:', err);
+      }
 
       setDevices(prevDevices => {
         const existingDevice = prevDevices.find(d => d.id === bleDevice.id);
@@ -31,7 +62,7 @@ export function useBluetooth() {
         const newDevice: Device = {
           id: bleDevice.id,
           name: bleDevice.name || 'Unknown Device',
-          rssi: 0, // RSSI is not available from requestDevice, would need active scanning
+          rssi: 0, // Updated via advertisementreceived events when available
           connected: false,
           device: bleDevice,
         };
@@ -62,24 +93,49 @@ export function useBluetooth() {
 
     try {
       console.log(`Connecting to ${deviceWrapper.name}...`);
-      await deviceWrapper.device.gatt?.connect();
-      
-      setDevices(prev => prev.map(d => d.id === deviceId ? { ...d, connected: true } : d));
-      
+      const server = await deviceWrapper.device.gatt?.connect();
+
+      const characteristics: Partial<Record<WidgetDataType, BluetoothRemoteGATTCharacteristic>> = {};
+      if (server) {
+        try {
+          for (const serviceUuid of KNOWN_SERVICE_UUIDS) {
+            try {
+              const service = await server.getPrimaryService(serviceUuid);
+              const chars = await service.getCharacteristics();
+              for (const char of chars) {
+                const dataType = characteristicUUIDToDataType[char.uuid];
+                if (dataType) {
+                  characteristics[dataType] = char;
+                }
+              }
+            } catch (_) {
+              // Ignore missing services
+            }
+          }
+        } catch (err) {
+          console.warn('Service discovery failed:', err);
+        }
+      }
+
+      setDevices(prev => prev.map(d => d.id === deviceId ? { ...d, connected: true, characteristics } : d));
+
       toast({
         title: "Connected",
         description: `Successfully connected to ${deviceWrapper.name}`,
       });
 
-      deviceWrapper.device.addEventListener('gattserverdisconnected', () => {
+      const handleDisconnected = () => {
         console.log(`${deviceWrapper.name} disconnected.`);
         setDevices(prev => prev.map(d => d.id === deviceId ? { ...d, connected: false } : d));
-         toast({
-            variant: "destructive",
-            title: "Disconnected",
-            description: `Lost connection to ${deviceWrapper.name}`,
+        toast({
+          variant: "destructive",
+          title: "Disconnected",
+          description: `Lost connection to ${deviceWrapper.name}`,
         });
-      });
+        deviceWrapper.device.removeEventListener?.('gattserverdisconnected', handleDisconnected);
+      };
+      deviceWrapper.device.removeEventListener?.('gattserverdisconnected', handleDisconnected);
+      deviceWrapper.device.addEventListener?.('gattserverdisconnected', handleDisconnected);
 
     } catch (error) {
       console.error(`Failed to connect to ${deviceWrapper.name}:`, error);
@@ -110,10 +166,34 @@ export function useBluetooth() {
     }
   }, [devices, toast]);
 
+  const readCharacteristicValue = useCallback(async (
+    deviceId: string,
+    dataType: WidgetDataType
+  ): Promise<number | null> => {
+    const deviceWrapper = devices.find(d => d.id === deviceId);
+    const characteristic = deviceWrapper?.characteristics?.[dataType];
+    if (!characteristic) return null;
+    try {
+      const value = await characteristic.readValue();
+      return parseCharacteristicValue(dataType, value);
+    } catch (err) {
+      console.warn(`Failed to read ${dataType} from ${deviceWrapper?.name}:`, err);
+      return null;
+    }
+  }, [devices]);
+
+  const renameDevice = useCallback((deviceId: string, newName: string) => {
+    setDevices(prev =>
+      prev.map(d => (d.id === deviceId ? { ...d, customName: newName } : d))
+    );
+  }, []);
+
   return {
     devices,
     requestDevice,
     connectDevice,
     disconnectDevice,
+    readCharacteristicValue,
+    renameDevice,
   };
 }
