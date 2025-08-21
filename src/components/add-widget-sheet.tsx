@@ -34,7 +34,7 @@ const widgetFormSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
   deviceId: z.string({ required_error: "Please select a device." }),
   dataType: z.enum(widgetDataTypes, { required_error: "Please select a data type." }),
-  type: z.enum(["value", "gauge"], { required_error: "Please select a widget type." }),
+  type: z.enum(["value", "gauge", "graph"], { required_error: "Please select a widget type." }),
 });
 
 type WidgetFormValues = z.infer<typeof widgetFormSchema>;
@@ -156,6 +156,12 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
                           <RadioGroupItem value="gauge" id="gauge" />
                         </FormControl>
                         <FormLabel htmlFor="gauge" className="font-normal">Gauge</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="graph" id="graph" />
+                        </FormControl>
+                        <FormLabel htmlFor="graph" className="font-normal">Graph</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>

@@ -1,11 +1,13 @@
 
 "use client";
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { MoreVertical, Trash2, Thermometer, Droplets, Battery } from "lucide-react";
+import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import type { Widget as WidgetType } from "@/lib/types";
 
 interface WidgetProps {
@@ -34,6 +36,15 @@ export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
   const unit = getUnit(widget.dataType);
   const displayValue = data !== undefined ? data.toFixed(1) : '--';
   const progressValue = data !== undefined ? data : 0;
+  const [history, setHistory] = useState<{ time: number; value: number }[]>([]);
+
+  useEffect(() => {
+    if (data === undefined) return;
+    setHistory(prev => {
+      const next = [...prev, { time: Date.now(), value: data }];
+      return next.slice(-20);
+    });
+  }, [data]);
   
   const formattedDataType = widget.dataType.charAt(0).toUpperCase() + widget.dataType.slice(1);
 
@@ -67,6 +78,22 @@ export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
               {displayValue}{unit}
             </div>
             <Progress value={progressValue} className="h-3" />
+          </div>
+        )}
+        {widget.type === 'graph' && (
+          <div className="w-full h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={history}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" tickFormatter={t => new Date(t).toLocaleTimeString()} />
+                <YAxis unit={unit} />
+                <Tooltip
+                  formatter={(value: number) => `${value.toFixed(1)}${unit}`}
+                  labelFormatter={label => new Date(label).toLocaleTimeString()}
+                />
+                <Line type="monotone" dataKey="value" stroke="#8884d8" dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         )}
       </CardContent>
