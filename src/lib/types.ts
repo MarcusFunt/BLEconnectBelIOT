@@ -16,7 +16,7 @@ export type Device = {
   characteristics?: Partial<Record<WidgetDataType, BluetoothRemoteGATTCharacteristic>>;
 };
 
-export type WidgetType = 'value' | 'gauge';
+export type WidgetType = 'value' | 'gauge' | 'graph';
 
 export type Widget = {
   id: string;
