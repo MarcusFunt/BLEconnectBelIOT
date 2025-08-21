@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { MoreVertical, Trash2, Thermometer, Droplets, Battery } from "lucide-react";
+import { MoreVertical, Trash2, Thermometer, Droplets, Battery, Heart } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import type { Widget as WidgetType } from "@/lib/types";
 
@@ -21,6 +21,7 @@ const dataTypeIcons: Partial<Record<WidgetType['dataType'], JSX.Element>> = {
   temperature: <Thermometer className="w-4 h-4 text-muted-foreground" />,
   humidity: <Droplets className="w-4 h-4 text-muted-foreground" />,
   battery: <Battery className="w-4 h-4 text-muted-foreground" />,
+  heart_rate: <Heart className="w-4 h-4 text-muted-foreground" />,
 };
 
 const getUnit = (dataType: WidgetType['dataType']) => {
@@ -28,13 +29,15 @@ const getUnit = (dataType: WidgetType['dataType']) => {
     case 'temperature': return '°C';
     case 'humidity': return '%';
     case 'battery': return '%';
+    case 'heart_rate': return 'bpm';
     default: return '';
   }
 };
 
 export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
   const unit = getUnit(widget.dataType);
-  const displayValue = data !== undefined ? data.toFixed(1) : '--';
+  const decimals = widget.dataType === 'temperature' ? 1 : 0;
+  const displayValue = data !== undefined ? data.toFixed(decimals) : '--';
   const progressValue = data !== undefined ? data : 0;
   const [history, setHistory] = useState<{ time: number; value: number }[]>([]);
 

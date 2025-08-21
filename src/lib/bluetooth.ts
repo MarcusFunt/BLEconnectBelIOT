@@ -5,54 +5,26 @@ export const COMPATIBLE_MANUFACTURER_ID = 0xffff;
 // ASCII 'BLE' so custom firmware can advertise it in the manufacturer data payload.
 export const COMPATIBLE_MANUFACTURER_DATA_PREFIX = new Uint8Array([0x42, 0x4c, 0x45]);
 
-// Known services used by the application.
-// Includes common GATT services so connected devices can expose a wide
-// variety of capabilities. Each entry is the 16-bit assigned number for the
-// service. Web Bluetooth accepts both strings and numbers for service UUIDs,
-// so using the numeric values keeps the list concise while still allowing
-// code elsewhere to reference them by name.
+// Returns true if the provided manufacturer data begins with the expected prefix.
+export function isCompatibleManufacturerData(data?: DataView | null): boolean {
+  if (!data || data.byteLength < COMPATIBLE_MANUFACTURER_DATA_PREFIX.length) {
+    return false;
+  }
+  for (let i = 0; i < COMPATIBLE_MANUFACTURER_DATA_PREFIX.length; i++) {
+    if (data.getUint8(i) !== COMPATIBLE_MANUFACTURER_DATA_PREFIX[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Services the app attempts to access when available. These are not used to
+// judge device compatibility but enable reading of common characteristics.
 export const KNOWN_SERVICE_UUIDS = [
-  0x1800, // Generic Access (GAP)
-  0x1801, // Generic Attribute (GATT)
-  0x1802, // Immediate Alert
-  0x1803, // Link Loss
-  0x1808, // Glucose
-  0x1809, // Health Thermometer
-  0x180a, // Device Information
-  0x180d, // Heart Rate
   0x180f, // Battery Service
-  0x1814, // Running Speed and Cadence
-  0x1815, // Automation IO
-  0x1816, // Cycling Speed and Cadence
-  0x1818, // Cycling Power
-  0x181a, // Environmental Sensing
-  0x181b, // Body Composition
-  0x181c, // User Data
-  0x181d, // Weight Scale
-  0x181e, // Bond Management
-  0x181f, // Continuous Glucose Monitoring
-  0x1820, // Internet Protocol Support
-  0x1822, // Pulse Oximeter
-  0x1826, // Fitness Machine
-  0x1829, // Reconnection Configuration
-  0x183a, // Insulin Delivery
-  0x183b, // Binary Sensor
-  0x183c, // Emergency Configuration
-  0x183d, // Authorization Control
-  0x183e, // Physical Activity Monitor
-  0x183f, // Elapsed Time
-  0x1840, // Generic Health Sensor
-  0x1843, // Audio Input Control
-  0x1844, // Volume Control
-  0x184d, // Microphone Control
-  0x184e, // Audio Stream Control
-  0x184f, // Broadcast Audio Scan
-  0x1850, // Published Audio Capabilities
-  0x1851, // Basic Audio Announcement
-  0x1857, // Electronic Shelf Label
-  0x185a, // Industrial Measurement Device
-  0x185b, // Ranging
-  0x185c, // HID ISO
+  0x181a, // Environmental Sensing (Temperature & Humidity)
+  0x180d, // Heart Rate Service
+  0x1809, // Health Thermometer Service
 ] as const;
 
 // Mapping of known characteristic UUIDs to their corresponding widget data types.
@@ -60,6 +32,7 @@ export const characteristicUUIDToDataType: Record<string, WidgetDataType> = {
   "00002a6e-0000-1000-8000-00805f9b34fb": "temperature", // Temperature (Environmental Sensing)
   "00002a6f-0000-1000-8000-00805f9b34fb": "humidity",    // Humidity (Environmental Sensing)
   "00002a19-0000-1000-8000-00805f9b34fb": "battery",     // Battery Level
+  "00002a37-0000-1000-8000-00805f9b34fb": "heart_rate",  // Heart Rate Measurement
 };
 
 // Reverse mapping to get characteristic UUID from a data type.
@@ -81,6 +54,11 @@ export function parseCharacteristicValue(type: WidgetDataType, view: DataView): 
     case "battery":
       // Unsigned 8-bit percentage.
       return view.getUint8(0);
+    case "heart_rate":
+      // Flags in first byte: bit0 indicates value format.
+      return (view.getUint8(0) & 0x01)
+        ? view.getUint16(1, /*littleEndian=*/true)
+        : view.getUint8(1);
     default:
       return NaN;
   }

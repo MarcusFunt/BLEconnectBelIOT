@@ -48,6 +48,10 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
     },
   });
 
+  const deviceId = form.watch("deviceId");
+  const selectedDevice = connectedDevices.find(d => d.id === deviceId);
+  const availableDataTypes = Object.keys(selectedDevice?.characteristics ?? {}) as WidgetDataType[];
+
   function onSubmit(data: WidgetFormValues) {
     onAddWidget(data as Omit<Widget, 'id'>);
     form.reset();
@@ -121,7 +125,7 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {widgetDataTypes.map(type => (
+                      {availableDataTypes.map(type => (
                         <SelectItem key={type} value={type}>
                           {type.charAt(0).toUpperCase() + type.slice(1)}
                         </SelectItem>
