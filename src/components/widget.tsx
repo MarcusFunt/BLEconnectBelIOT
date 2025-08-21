@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { MoreVertical, Trash2, Thermometer, Droplets, Battery } from "lucide-react";
+import { MoreVertical, Trash2 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import type { Widget as WidgetType } from "@/lib/types";
 
@@ -17,17 +17,17 @@ interface WidgetProps {
   onRemove: (widgetId: string) => void;
 }
 
-const dataTypeIcons: Partial<Record<WidgetType['dataType'], JSX.Element>> = {
-  temperature: <Thermometer className="w-4 h-4 text-muted-foreground" />,
-  humidity: <Droplets className="w-4 h-4 text-muted-foreground" />,
-  battery: <Battery className="w-4 h-4 text-muted-foreground" />,
-};
-
 const getUnit = (dataType: WidgetType['dataType']) => {
   switch (dataType) {
-    case 'temperature': return '°C';
-    case 'humidity': return '%';
-    case 'battery': return '%';
+    case 'temperature':
+    case 'health_thermometer':
+      return '°C';
+    case 'humidity':
+      return '%';
+    case 'battery':
+      return '%';
+    case 'heart_rate':
+      return 'bpm';
     default: return '';
   }
 };
@@ -100,7 +100,6 @@ export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
       <CardFooter className="flex items-center justify-between text-sm text-muted-foreground">
         <span>{deviceName}</span>
         <div className="flex items-center gap-1.5">
-          {dataTypeIcons[widget.dataType]}
           <span>{formattedDataType}</span>
         </div>
       </CardFooter>
