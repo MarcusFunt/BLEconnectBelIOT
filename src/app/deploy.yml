@@ -1,0 +1,61 @@
+name: Deploy Next.js to GitHub Pages
+
+on:
+  push:
+    # Trigger the workflow when commits are pushed to the main branch.
+    branches: [ main ]
+  # Allow manual invocation from the GitHub UI.
+  workflow_dispatch:
+
+# Required permissions for deploying to Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Cancel previous runs in progress when a new run is triggered.
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the Next.js app
+        run: npm run build
+
+      - name: Add .nojekyll
+        run: |
+          # The Pages service will ignore files beginning with _ unless .nojekyll
+          # is present. Touch the file inside the output directory.
+          mkdir -p ./out
+          touch ./out/.nojekyll
+
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './out'
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
