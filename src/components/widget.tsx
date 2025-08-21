@@ -17,7 +17,7 @@ interface WidgetProps {
   onRemove: (widgetId: string) => void;
 }
 
-const dataTypeIcons = {
+const dataTypeIcons: Partial<Record<WidgetType['dataType'], JSX.Element>> = {
   temperature: <Thermometer className="w-4 h-4 text-muted-foreground" />,
   humidity: <Droplets className="w-4 h-4 text-muted-foreground" />,
   battery: <Battery className="w-4 h-4 text-muted-foreground" />,
