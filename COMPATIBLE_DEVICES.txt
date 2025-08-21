@@ -10,12 +10,13 @@ To create a compatible ESP32 device:
 2. When advertising, include the manufacturer data:
    - Company Identifier: 0xFFFF (reserved for testing)
    - Data payload prefix: 0x42 0x4C 0x45 ('BLE')
-3. Expose the following services and characteristics:
-   - Battery Service (0x180F) with Battery Level characteristic (0x2A19)
-   - Health Thermometer (0x1809) with Temperature characteristic (0x2A6E)
-   - Environmental Sensing (0x181A) with Humidity characteristic (0x2A6F)
+3. Optionally expose any GATT services and characteristics you wish. The app
+   will attempt to read the Battery Level (0x180F/0x2A19), Temperature
+   (0x1809/0x2A6E) and Humidity (0x181A/0x2A6F) characteristics when available,
+   but their presence is not required for a device to be considered compatible.
 4. Update characteristic values as your sensors change.
 5. Ensure the device advertises while disconnected so it can be discovered.
 
 Devices following these guidelines will appear in the scan dialog and their
-characteristic values will populate widgets in the dashboard.
+characteristic values will populate widgets in the dashboard when those
+services are present.

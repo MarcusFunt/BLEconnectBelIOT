@@ -10,6 +10,7 @@ import {
   COMPATIBLE_MANUFACTURER_ID,
   COMPATIBLE_MANUFACTURER_DATA_PREFIX,
   KNOWN_SERVICE_UUIDS,
+  isCompatibleManufacturerData,
 } from "@/lib/bluetooth";
 
 export function useBluetooth() {
@@ -41,6 +42,28 @@ export function useBluetooth() {
 
       try {
         await bleDevice.watchAdvertisements();
+        const isCompatible = await new Promise<boolean>((resolve) => {
+          const handler = (event: any) => {
+            const data = event.manufacturerData?.get(COMPATIBLE_MANUFACTURER_ID);
+            resolve(isCompatibleManufacturerData(data));
+            bleDevice.removeEventListener('advertisementreceived', handler);
+          };
+          bleDevice.addEventListener('advertisementreceived', handler, { once: true });
+          setTimeout(() => {
+            bleDevice.removeEventListener('advertisementreceived', handler);
+            resolve(false);
+          }, 1000);
+        });
+
+        if (!isCompatible) {
+          toast({
+            variant: 'destructive',
+            title: 'Incompatible Device',
+            description: 'Selected device does not match compatibility requirements.',
+          });
+          return;
+        }
+
         bleDevice.addEventListener('advertisementreceived', (event: any) => {
           if (typeof event.rssi === 'number') {
             setDevices(prev =>
@@ -98,9 +121,9 @@ export function useBluetooth() {
       const characteristics: Partial<Record<WidgetDataType, BluetoothRemoteGATTCharacteristic>> = {};
       if (server) {
         try {
-          for (const serviceUuid of KNOWN_SERVICE_UUIDS) {
+          const services = await server.getPrimaryServices();
+          for (const service of services) {
             try {
-              const service = await server.getPrimaryService(serviceUuid);
               const chars = await service.getCharacteristics();
               for (const char of chars) {
                 const dataType = characteristicUUIDToDataType[char.uuid];
@@ -109,7 +132,7 @@ export function useBluetooth() {
                 }
               }
             } catch (_) {
-              // Ignore missing services
+              // Ignore missing characteristics
             }
           }
         } catch (err) {
