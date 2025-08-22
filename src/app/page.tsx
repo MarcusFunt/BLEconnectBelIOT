@@ -25,6 +25,7 @@ export default function Home() {
       connectDevice,
       disconnectDevice,
       renameDevice,
+      readCharacteristicValue,
     } = useBluetooth();
 
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
@@ -34,82 +35,33 @@ export default function Home() {
 
   const connectedDevices = React.useMemo(() => devices.filter(d => d.connected), [devices]);
 
-  const readValues = React.useCallback(
-    async (targets: Device[] = connectedDevices) => {
-      const devicePromises = targets.map(async device => {
+    const readValues = React.useCallback(
+      async (targets: Device[] = connectedDevices) => {
+        const devicePromises = targets.map(async device => {
+          const deviceWidgets = widgets.filter(w => w.deviceId === device.id);
+          const values: Record<string, number> = {};
 
-        const server = device.device.gatt;
-        if (!server) return;
-        if (!server.connected) {
-          try {
-            await server.connect();
-          } catch (err) {
-            console.error(`Failed to connect to ${device.name}:`, err);
-            return;
+          const characteristicPromises = deviceWidgets.map(async widget => {
+            const value = await readCharacteristicValue(device.id, widget.dataType as WidgetDataType);
+            if (value !== null) {
+              values[widget.dataType] = value;
+            }
+          });
+
+          await Promise.all(characteristicPromises);
+
+          if (Object.keys(values).length) {
+            setData(prev => ({
+              ...prev,
+              [device.id]: { ...(prev[device.id] ?? {}), ...values },
+            }));
           }
-        }
+        });
 
-        const values: Record<string, number> = {};
-
-        const characteristicPromises: Promise<void>[] = [];
-
-        characteristicPromises.push(
-          (async () => {
-            try {
-              const service = await server.getPrimaryService("battery_service");
-              const characteristic = await service.getCharacteristic("battery_level");
-              const value = await characteristic.readValue();
-              values.battery = value.getUint8(0);
-            } catch (err) {
-              console.error(`Battery read failed for ${device.name}`, err);
-            }
-          })()
-        );
-
-        characteristicPromises.push(
-          (async () => {
-            try {
-              const service = await server.getPrimaryService("health_thermometer");
-              const characteristic = await service.getCharacteristic("temperature_measurement");
-              const value = await characteristic.readValue();
-              const temp = value.getFloat32(0, true);
-              values.temperature = Math.round(temp * 10) / 10;
-            } catch (err) {
-              console.error(`Temperature read failed for ${device.name}`, err);
-            }
-          })()
-        );
-
-        characteristicPromises.push(
-          (async () => {
-            try {
-              const service = await server.getPrimaryService("environmental_sensing");
-              const characteristic = await service.getCharacteristic("humidity");
-              const value = await characteristic.readValue();
-              values.humidity = value.getUint8(0);
-            } catch (err) {
-              console.error(`Humidity read failed for ${device.name}`, err);
-            }
-          })()
-        );
-
-        await Promise.all(characteristicPromises);
-
-        if (Object.keys(values).length) {
-          setData(prev => ({
-            ...prev,
-            [device.id]: { ...(prev[device.id] ?? {}), ...values },
-          }));
-        }
-
-      });
-
-      await Promise.all(devicePromises);
-    },
-
-    [connectedDevices]
-
-  );
+        await Promise.all(devicePromises);
+      },
+      [connectedDevices, widgets, readCharacteristicValue]
+    );
 
   React.useEffect(() => {
     const timers = connectedDevices.map(device =>
