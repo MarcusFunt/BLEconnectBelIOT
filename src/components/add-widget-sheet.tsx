@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -20,10 +19,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Device, Widget } from "@/lib/types";
-import { widgetDataTypes } from "@/lib/types";
+import { getCharacteristicName } from "@/lib/bluetooth";
+import { useEffect, type ReactNode } from "react";
 
 interface AddWidgetSheetProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddWidget: (widget: Omit<Widget, 'id'>) => void;
@@ -33,7 +33,7 @@ interface AddWidgetSheetProps {
 const widgetFormSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
   deviceId: z.string({ required_error: "Please select a device." }),
-  dataType: z.enum(widgetDataTypes, { required_error: "Please select a data type." }),
+  dataType: z.string({ required_error: "Please select a data type." }),
   type: z.enum(["value", "gauge", "graph"], { required_error: "Please select a widget type." }),
 });
 
@@ -47,6 +47,14 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
       type: "value",
     },
   });
+
+  const selectedDeviceId = form.watch("deviceId");
+  const selectedDevice = connectedDevices.find(d => d.id === selectedDeviceId);
+  const availableDataTypes = selectedDevice ? Object.keys(selectedDevice.characteristics || {}) : [];
+
+  useEffect(() => {
+    form.setValue("dataType", "");
+  }, [selectedDeviceId, form]);
 
   function onSubmit(data: WidgetFormValues) {
     onAddWidget(data as Omit<Widget, 'id'>);
@@ -121,9 +129,9 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {widgetDataTypes.map(type => (
+                      {availableDataTypes.map(type => (
                         <SelectItem key={type} value={type}>
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                          {getCharacteristicName(type)}
                         </SelectItem>
                       ))}
                     </SelectContent>

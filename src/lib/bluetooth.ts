@@ -1,5 +1,3 @@
-import type { WidgetDataType } from "./types";
-
 // Manufacturer data used to identify compatible devices during scanning.
 export const COMPATIBLE_MANUFACTURER_ID = 0xffff;
 // ASCII 'BLE' so custom firmware can advertise it in the manufacturer data payload.
@@ -25,33 +23,49 @@ export const KNOWN_SERVICE_UUIDS = [
   0x181a, // Environmental Sensing (Temperature & Humidity)
 ] as const;
 
-// Mapping of known characteristic UUIDs to their corresponding widget data types.
-export const characteristicUUIDToDataType: Record<string, WidgetDataType> = {
-  "00002a6e-0000-1000-8000-00805f9b34fb": "temperature", // Temperature (Environmental Sensing)
-  "00002a6f-0000-1000-8000-00805f9b34fb": "humidity",    // Humidity (Environmental Sensing)
-  "00002a19-0000-1000-8000-00805f9b34fb": "battery",     // Battery Level
+interface CharacteristicInfo {
+  name: string;
+  unit: string;
+  parse: (view: DataView) => number;
+}
+
+export const CHARACTERISTICS: Record<string, CharacteristicInfo> = {
+  "00002a6e-0000-1000-8000-00805f9b34fb": {
+    name: "temperature",
+    unit: "°C",
+    parse: view => view.getInt16(0, true) / 100,
+  },
+  "00002a6f-0000-1000-8000-00805f9b34fb": {
+    name: "humidity",
+    unit: "%",
+    parse: view => view.getUint16(0, true) / 100,
+  },
+  "00002a19-0000-1000-8000-00805f9b34fb": {
+    name: "battery",
+    unit: "%",
+    parse: view => view.getUint8(0),
+  },
 };
 
-// Reverse mapping to get characteristic UUID from a data type.
-export const dataTypeToCharacteristicUUID: Record<WidgetDataType, string> = Object.entries(characteristicUUIDToDataType)
-  .reduce((acc, [uuid, type]) => {
-    acc[type] = uuid;
-    return acc;
-  }, {} as Record<WidgetDataType, string>);
-
 // Parser helpers for characteristics to convert their DataView into numbers.
-export function parseCharacteristicValue(type: WidgetDataType, view: DataView): number {
-  switch (type) {
-    case "temperature":
-      // Signed 16-bit with a resolution of 0.01 degrees Celsius.
-      return view.getInt16(0, /*littleEndian=*/true) / 100;
-    case "humidity":
-      // Unsigned 16-bit with a resolution of 0.01%.
-      return view.getUint16(0, /*littleEndian=*/true) / 100;
-    case "battery":
-      // Unsigned 8-bit percentage.
-      return view.getUint8(0);
-    default:
-      return NaN;
+export function parseCharacteristicValue(uuid: string, view: DataView): number {
+  const parser = CHARACTERISTICS[uuid]?.parse;
+  if (parser) {
+    return parser(view);
   }
+  if (view.byteLength >= 2) {
+    return view.getInt16(0, true);
+  }
+  if (view.byteLength >= 1) {
+    return view.getInt8(0);
+  }
+  return NaN;
+}
+
+export function getCharacteristicName(uuid: string): string {
+  return CHARACTERISTICS[uuid]?.name ?? uuid;
+}
+
+export function getCharacteristicUnit(uuid: string): string {
+  return CHARACTERISTICS[uuid]?.unit ?? "";
 }

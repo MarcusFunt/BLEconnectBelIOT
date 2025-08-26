@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Plus, Router } from "lucide-react";
 import { AddWidgetSheet } from "@/components/add-widget-sheet";
 import { useBluetooth } from "@/hooks/use-bluetooth";
-import type { WidgetDataType } from "@/lib/types";
 
 export default function Home() {
     const {
@@ -42,7 +41,7 @@ export default function Home() {
           const values: Record<string, number> = {};
 
           const characteristicPromises = deviceWidgets.map(async widget => {
-            const value = await readCharacteristicValue(device.id, widget.dataType as WidgetDataType);
+            const value = await readCharacteristicValue(device.id, widget.dataType);
             if (value !== null) {
               values[widget.dataType] = value;
             }
