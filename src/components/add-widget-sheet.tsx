@@ -35,6 +35,9 @@ const widgetFormSchema = z.object({
   deviceId: z.string({ required_error: "Please select a device." }),
   dataType: z.string({ required_error: "Please select a data type." }),
   type: z.enum(["value", "gauge", "graph"], { required_error: "Please select a widget type." }),
+  historyLength: z.coerce.number().int().min(1, "History length must be at least 1."),
+  lineColor: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Invalid color."),
+  refreshRate: z.coerce.number().int().min(100, "Refresh rate must be at least 100ms."),
 });
 
 type WidgetFormValues = z.infer<typeof widgetFormSchema>;
@@ -44,20 +47,27 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
     resolver: zodResolver(widgetFormSchema),
     defaultValues: {
       title: "",
+      deviceId: "",
+      dataType: "",
       type: "value",
+      historyLength: 20,
+      lineColor: "#8884d8",
+      refreshRate: 2000,
     },
   });
 
   const selectedDeviceId = form.watch("deviceId");
   const selectedDevice = connectedDevices.find(d => d.id === selectedDeviceId);
   const availableDataTypes = selectedDevice ? Object.keys(selectedDevice.characteristics || {}) : [];
+  const selectedWidgetType = form.watch("type");
 
   useEffect(() => {
     form.setValue("dataType", "");
   }, [selectedDeviceId, form]);
 
   function onSubmit(data: WidgetFormValues) {
-    onAddWidget(data as Omit<Widget, 'id'>);
+    const { historyLength, lineColor, refreshRate, ...rest } = data;
+    onAddWidget({ ...rest, settings: { historyLength, lineColor, refreshRate } });
     form.reset();
   }
 
@@ -172,6 +182,51 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
                         <FormLabel htmlFor="graph" className="font-normal">Graph</FormLabel>
                       </FormItem>
                     </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {selectedWidgetType === "graph" && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="historyLength"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>History Length</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lineColor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Line Color</FormLabel>
+                      <FormControl>
+                        <Input type="color" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+
+            <FormField
+              control={form.control}
+              name="refreshRate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Refresh Rate (ms)</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

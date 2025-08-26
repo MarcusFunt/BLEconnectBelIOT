@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -20,18 +20,25 @@ interface WidgetProps {
 
 export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
   const unit = getCharacteristicUnit(widget.dataType);
-  const displayValue = data !== undefined ? data.toFixed(1) : '--';
-  const progressValue = data !== undefined ? data : 0;
+  const { historyLength, lineColor, refreshRate } = widget.settings;
+  const [displayData, setDisplayData] = useState<number | undefined>();
   const [history, setHistory] = useState<{ time: number; value: number }[]>([]);
+  const lastUpdateRef = useRef(0);
 
   useEffect(() => {
     if (data === undefined) return;
+    const now = Date.now();
+    if (now - lastUpdateRef.current < refreshRate) return;
+    lastUpdateRef.current = now;
+    setDisplayData(data);
     setHistory(prev => {
-      const next = [...prev, { time: Date.now(), value: data }];
-      return next.slice(-20);
+      const next = [...prev, { time: now, value: data }];
+      return next.slice(-historyLength);
     });
-  }, [data]);
+  }, [data, refreshRate, historyLength]);
   
+  const displayValue = displayData !== undefined ? displayData.toFixed(1) : '--';
+  const progressValue = displayData !== undefined ? displayData : 0;
   const displayName = getCharacteristicName(widget.dataType);
   const formattedDataType = displayName.charAt(0).toUpperCase() + displayName.slice(1);
 
@@ -78,7 +85,7 @@ export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
                   formatter={(value: number) => `${value.toFixed(1)}${unit}`}
                   labelFormatter={label => new Date(label).toLocaleTimeString()}
                 />
-                <Line type="monotone" dataKey="value" stroke="#8884d8" dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="value" stroke={lineColor} dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
