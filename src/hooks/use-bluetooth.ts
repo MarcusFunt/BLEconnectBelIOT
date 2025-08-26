@@ -126,6 +126,21 @@ export function useBluetooth() {
               const chars = await service.getCharacteristics();
               for (const char of chars) {
                 characteristics[char.uuid] = char;
+
+                // Auto-subscribe to updates when supported
+                const p = (char as any).properties;
+                if (p?.notify || p?.indicate) {
+                  await char.startNotifications().catch(() => {});
+                  char.addEventListener('characteristicvaluechanged', (ev: any) => {
+                    const dv = (ev.target as BluetoothRemoteGATTCharacteristic).value as DataView;
+                    const val = parseCharacteristicValue(char.uuid, dv);
+                    setDevices(prev => prev.map(d =>
+                      d.id === deviceId
+                        ? { ...d, latestValues: { ...(d.latestValues ?? {}), [char.uuid]: val } }
+                        : d
+                    ));
+                  });
+                }
               }
             } catch (_) {
               // Ignore missing characteristics
@@ -136,7 +151,11 @@ export function useBluetooth() {
         }
       }
 
-      setDevices(prev => prev.map(d => d.id === deviceId ? { ...d, connected: true, characteristics } : d));
+      setDevices(prev =>
+        prev.map(d =>
+          d.id === deviceId ? { ...d, connected: true, characteristics, latestValues: {} } : d
+        )
+      );
 
       toast({
         title: "Connected",
@@ -190,7 +209,10 @@ export function useBluetooth() {
     dataType: WidgetDataType
   ): Promise<number | null> => {
     const deviceWrapper = devices.find(d => d.id === deviceId);
-    const characteristic = deviceWrapper?.characteristics?.[dataType];
+    if (!deviceWrapper) return null;
+    const latest = deviceWrapper.latestValues?.[dataType];
+    if (latest !== undefined) return latest;
+    const characteristic = deviceWrapper.characteristics?.[dataType];
     if (!characteristic) return null;
     try {
       const value = await characteristic.readValue();
