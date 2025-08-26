@@ -28,4 +28,9 @@ export type Widget = {
   deviceId: string;
   dataType: WidgetDataType;
   type: WidgetType;
+  settings: {
+    historyLength: number;
+    lineColor: string;
+    refreshRate: number;
+  };
 };
