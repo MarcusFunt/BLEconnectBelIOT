@@ -13,6 +13,11 @@ export type Device = {
    * Populated when a device is connected and its services are discovered.
    */
   characteristics?: Record<string, BluetoothRemoteGATTCharacteristic>;
+  /**
+   * Latest numeric values for characteristics keyed by UUID.
+   * Populated via notifications/indications when available.
+   */
+  latestValues?: Record<string, number>;
 };
 
 export type WidgetType = 'value' | 'gauge' | 'graph';
