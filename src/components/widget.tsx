@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { MoreVertical, Trash2 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import type { Widget as WidgetType } from "@/lib/types";
+import { getCharacteristicName, getCharacteristicUnit } from "@/lib/bluetooth";
 
 interface WidgetProps {
   widget: WidgetType;
@@ -17,17 +18,8 @@ interface WidgetProps {
   onRemove: (widgetId: string) => void;
 }
 
-const getUnit = (dataType: WidgetType['dataType']) => {
-  switch (dataType) {
-    case 'temperature': return '°C';
-    case 'humidity': return '%';
-    case 'battery': return '%';
-    default: return '';
-  }
-};
-
 export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
-  const unit = getUnit(widget.dataType);
+  const unit = getCharacteristicUnit(widget.dataType);
   const displayValue = data !== undefined ? data.toFixed(1) : '--';
   const progressValue = data !== undefined ? data : 0;
   const [history, setHistory] = useState<{ time: number; value: number }[]>([]);
@@ -40,7 +32,8 @@ export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
     });
   }, [data]);
   
-  const formattedDataType = widget.dataType.charAt(0).toUpperCase() + widget.dataType.slice(1);
+  const displayName = getCharacteristicName(widget.dataType);
+  const formattedDataType = displayName.charAt(0).toUpperCase() + displayName.slice(1);
 
   return (
     <Card className="flex flex-col">

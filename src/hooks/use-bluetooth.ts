@@ -5,7 +5,6 @@ import { useState, useCallback } from 'react';
 import type { Device, WidgetDataType } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import {
-  characteristicUUIDToDataType,
   parseCharacteristicValue,
   COMPATIBLE_MANUFACTURER_ID,
   COMPATIBLE_MANUFACTURER_DATA_PREFIX,
@@ -118,7 +117,7 @@ export function useBluetooth() {
       console.log(`Connecting to ${deviceWrapper.name}...`);
       const server = await deviceWrapper.device.gatt?.connect();
 
-      const characteristics: Partial<Record<WidgetDataType, BluetoothRemoteGATTCharacteristic>> = {};
+      const characteristics: Record<string, BluetoothRemoteGATTCharacteristic> = {};
       if (server) {
         try {
           const services = await server.getPrimaryServices();
@@ -126,10 +125,7 @@ export function useBluetooth() {
             try {
               const chars = await service.getCharacteristics();
               for (const char of chars) {
-                const dataType = characteristicUUIDToDataType[char.uuid];
-                if (dataType) {
-                  characteristics[dataType] = char;
-                }
+                characteristics[char.uuid] = char;
               }
             } catch (_) {
               // Ignore missing characteristics
