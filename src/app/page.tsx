@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Router } from "lucide-react";
 import { AddWidgetSheet } from "@/components/add-widget-sheet";
 import { useBluetooth } from "@/hooks/use-bluetooth";
+import { loadFromStorage, saveToStorage } from "@/lib/utils";
 
 export default function Home() {
     const {
@@ -33,6 +34,14 @@ export default function Home() {
   const [isAddWidgetSheetOpen, setIsAddWidgetSheetOpen] = React.useState(false);
 
   const connectedDevices = React.useMemo(() => devices.filter(d => d.connected), [devices]);
+
+  React.useEffect(() => {
+    setWidgets(loadFromStorage<Widget[]>("widgets", []));
+  }, []);
+
+  React.useEffect(() => {
+    saveToStorage("widgets", widgets);
+  }, [widgets]);
 
     const readValues = React.useCallback(
       async (targets: Device[] = connectedDevices) => {
