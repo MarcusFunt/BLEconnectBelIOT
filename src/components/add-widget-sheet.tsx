@@ -78,7 +78,7 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
           {children}
         </SheetTrigger>
       )}
-      <SheetContent>
+      <SheetContent className="overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Add a new widget</SheetTitle>
           <SheetDescription>
