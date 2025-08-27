@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { MoreVertical, Trash2 } from "lucide-react";
+import { MoreVertical, Trash2, Download, Eraser } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 import type { Widget as WidgetType } from "@/lib/types";
 import { getCharacteristicName, getCharacteristicUnit } from "@/lib/bluetooth";
@@ -35,7 +35,33 @@ export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
       const next = [...prev, { time: now, value: data }];
       return next.slice(-historyLength);
     });
-  }, [data, refreshRate, historyLength]);
+    if (!widget.log) {
+      widget.log = [];
+    }
+    widget.log.push({ time: now, value: data });
+  }, [data, refreshRate, historyLength, widget]);
+
+  const handleDownloadLog = () => {
+    if (!widget.log || widget.log.length === 0) return;
+    const csv = [
+      "time,value",
+      ...widget.log.map(entry => `${new Date(entry.time).toISOString()},${entry.value}`),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${widget.title.replace(/\s+/g, "_")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleClearLog = () => {
+    if (widget.log) {
+      widget.log.length = 0;
+    }
+    setHistory([]);
+  };
   
   const displayValue = displayData !== undefined ? displayData.toFixed(1) : '--';
   const progressValue = displayData !== undefined ? displayData : 0;
@@ -53,6 +79,14 @@ export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={handleDownloadLog}>
+              <Download className="w-4 h-4 mr-2" />
+              Download CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleClearLog}>
+              <Eraser className="w-4 h-4 mr-2" />
+              Clear Log
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onRemove(widget.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
               <Trash2 className="w-4 h-4 mr-2" />
               Remove
