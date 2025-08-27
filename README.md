@@ -7,6 +7,7 @@ belIOT is a Web Bluetooth dashboard for discovering, connecting, and visualizing
 - **Customizable widgets** – add widgets that read GATT characteristic values and display live data from connected devices on the dashboard.
 - **Real-time updates** – device data is polled periodically so widgets stay current as values change.
 - **Persistent widgets** – layouts and widget settings are saved in the browser so your dashboard returns after a refresh.
+- **Reading logs** – each widget keeps a buffer of readings that can be exported as CSV or cleared at any time.
 
 ## Getting Started
 1. **Install dependencies**
@@ -29,4 +30,8 @@ belIOT is a Web Bluetooth dashboard for discovering, connecting, and visualizing
 - [`src/components/device-manager.tsx`](src/components/device-manager.tsx) – interface for scanning, connecting, and renaming devices.
 - [`src/components/dashboard.tsx`](src/components/dashboard.tsx) – renders widgets and displays device data.
 - [`src/hooks/use-bluetooth.ts`](src/hooks/use-bluetooth.ts) – hook that implements BLE scanning, connections, and characteristic reads.
+
+## Widget Logs
+
+Open a widget's menu and select **Download CSV** to export all recorded readings. Use **Clear Log** from the same menu to reset the log buffer.
 

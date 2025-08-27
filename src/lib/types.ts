@@ -22,6 +22,11 @@ export type Device = {
 
 export type WidgetType = 'value' | 'gauge' | 'graph';
 
+export type WidgetLogEntry = {
+  time: number;
+  value: number;
+};
+
 export type Widget = {
   id: string;
   title: string;
@@ -33,4 +38,8 @@ export type Widget = {
     lineColor: string;
     refreshRate: number;
   };
+  /**
+   * Optional log buffer storing all readings for export.
+   */
+  log?: WidgetLogEntry[];
 };
