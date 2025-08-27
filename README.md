@@ -6,6 +6,7 @@ belIOT is a Web Bluetooth dashboard for discovering, connecting, and visualizing
 - **Device scanning & management** – use the Device Manager to scan for BLE devices, connect or disconnect them, and rename devices for easy identification.
 - **Customizable widgets** – add widgets that read GATT characteristic values and display live data from connected devices on the dashboard.
 - **Real-time updates** – device data is polled periodically so widgets stay current as values change.
+- **Persistent widgets** – layouts and widget settings are saved in the browser so your dashboard returns after a refresh.
 
 ## Getting Started
 1. **Install dependencies**
