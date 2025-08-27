@@ -7,6 +7,7 @@ belIOT is a Web Bluetooth dashboard for discovering, connecting, and visualizing
 - **Customizable widgets** – add widgets that read GATT characteristic values and display live data from connected devices on the dashboard.
 - **Real-time updates** – device data is polled periodically so widgets stay current as values change.
 - **Persistent widgets** – layouts and widget settings are saved in the browser so your dashboard returns after a refresh.
+- **Saved devices** – connected devices are remembered in the browser and restored on load for easy reconnection.
 - **Reading logs** – each widget keeps a buffer of readings that can be exported as CSV or cleared at any time.
 
 ## Getting Started
