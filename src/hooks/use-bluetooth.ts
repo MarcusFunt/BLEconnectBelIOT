@@ -1,8 +1,9 @@
 
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Device, WidgetDataType } from '@/lib/types';
+import { loadFromStorage, saveToStorage } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import {
   parseCharacteristicValue,
@@ -12,9 +13,40 @@ import {
   isCompatibleManufacturerData,
 } from "@/lib/bluetooth";
 
+type StoredDevice = Pick<Device, "id" | "name" | "customName" | "autoConnect">;
+
 export function useBluetooth() {
-  const [devices, setDevices] = useState<Device[]>([]);
+  const [devices, setDevices] = useState<Device[]>(() =>
+    loadFromStorage<StoredDevice[]>("devices", []).map(d => ({ ...d, rssi: 0, connected: false }))
+  );
   const { toast } = useToast();
+
+  useEffect(() => {
+    (async () => {
+      if (typeof navigator === "undefined" || !(navigator as any).bluetooth?.getDevices) return;
+      try {
+        const allowed: BluetoothDevice[] = await (navigator as any).bluetooth.getDevices();
+        allowed.forEach((dev: BluetoothDevice) => {
+          dev.addEventListener?.("advertisementreceived", (event: any) => {
+            if (typeof event.rssi === "number") {
+              setDevices(prev =>
+                prev.map(d => (d.id === dev.id ? { ...d, rssi: event.rssi } : d))
+              );
+            }
+          });
+          (dev as any).watchAdvertisements?.().catch(() => {});
+        });
+          setDevices(prev =>
+            prev.map(d => {
+              const match = allowed.find((ad: BluetoothDevice) => ad.id === d.id);
+              return match ? { ...d, device: match } : d;
+            })
+          );
+      } catch (err) {
+        console.warn("Failed to restore previously paired devices:", err);
+      }
+    })();
+  }, []);
 
   const requestDevice = useCallback(async () => {
     try {
@@ -86,6 +118,7 @@ export function useBluetooth() {
           name: bleDevice.name || 'Unknown Device',
           rssi: 0, // Updated via advertisementreceived events when available
           connected: false,
+          autoConnect: false,
           device: bleDevice,
         };
         return [...prevDevices, newDevice];
@@ -108,7 +141,7 @@ export function useBluetooth() {
 
   const connectDevice = useCallback(async (deviceId: string) => {
     const deviceWrapper = devices.find(d => d.id === deviceId);
-    if (!deviceWrapper) {
+    if (!deviceWrapper || !deviceWrapper.device) {
       console.error('Device not found');
       return;
     }
@@ -170,10 +203,10 @@ export function useBluetooth() {
           title: "Disconnected",
           description: `Lost connection to ${deviceWrapper.name}`,
         });
-        deviceWrapper.device.removeEventListener?.('gattserverdisconnected', handleDisconnected);
+        deviceWrapper.device?.removeEventListener?.('gattserverdisconnected', handleDisconnected);
       };
-      deviceWrapper.device.removeEventListener?.('gattserverdisconnected', handleDisconnected);
-      deviceWrapper.device.addEventListener?.('gattserverdisconnected', handleDisconnected);
+      deviceWrapper.device?.removeEventListener?.('gattserverdisconnected', handleDisconnected);
+      deviceWrapper.device?.addEventListener?.('gattserverdisconnected', handleDisconnected);
 
     } catch (error) {
       console.error(`Failed to connect to ${deviceWrapper.name}:`, error);
@@ -187,13 +220,13 @@ export function useBluetooth() {
 
   const disconnectDevice = useCallback(async (deviceId: string) => {
     const deviceWrapper = devices.find(d => d.id === deviceId);
-    if (!deviceWrapper || !deviceWrapper.device.gatt?.connected) {
+    if (!deviceWrapper || !deviceWrapper.device?.gatt?.connected) {
       return;
     }
 
     try {
       console.log(`Disconnecting from ${deviceWrapper.name}...`);
-      deviceWrapper.device.gatt?.disconnect();
+      deviceWrapper.device?.gatt?.disconnect();
       setDevices(prev => prev.map(d => d.id === deviceId ? { ...d, connected: false } : d));
       toast({
         title: "Disconnected",
@@ -229,6 +262,30 @@ export function useBluetooth() {
     );
   }, []);
 
+  const toggleAutoConnect = useCallback((deviceId: string, value: boolean) => {
+    setDevices(prev =>
+      prev.map(d => (d.id === deviceId ? { ...d, autoConnect: value } : d))
+    );
+  }, []);
+
+  useEffect(() => {
+    const storable = devices.map(({ id, name, customName, autoConnect }) => ({
+      id,
+      name,
+      customName,
+      autoConnect,
+    }));
+    saveToStorage("devices", storable);
+  }, [devices]);
+
+  useEffect(() => {
+    devices.forEach(d => {
+      if (d.autoConnect && d.device && !d.connected) {
+        connectDevice(d.id);
+      }
+    });
+  }, [devices, connectDevice]);
+
   return {
     devices,
     requestDevice,
@@ -236,5 +293,6 @@ export function useBluetooth() {
     disconnectDevice,
     readCharacteristicValue,
     renameDevice,
+    toggleAutoConnect,
   };
 }
