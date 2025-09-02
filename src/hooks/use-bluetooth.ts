@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import type { Device, WidgetDataType } from '@/lib/types';
 import { loadFromStorage, saveToStorage } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +12,6 @@ import {
   KNOWN_SERVICE_UUIDS,
   isCompatibleManufacturerData,
 } from "@/lib/bluetooth";
-import { loadFromStorage, saveToStorage } from "@/lib/utils";
 
 type StoredDevice = Pick<Device, 'id' | 'name' | 'customName'>;
 const DEVICE_STORAGE_KEY = 'devices';
@@ -20,35 +19,6 @@ const DEVICE_STORAGE_KEY = 'devices';
 export function useBluetooth() {
   const [devices, setDevices] = useState<Device[]>([]);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const restoreDevices = async () => {
-      const saved = loadFromStorage<{ id: string; customName?: string }[]>("devices", []);
-      if (typeof navigator === "undefined" || !(navigator as any).bluetooth?.getDevices) {
-        return;
-      }
-      try {
-        const bleDevices: BluetoothDevice[] = await (navigator as any).bluetooth.getDevices();
-        const restored: Device[] = bleDevices.map(d => ({
-          id: d.id,
-          name: d.name || "Unknown Device",
-          rssi: 0,
-          connected: d.gatt?.connected ?? false,
-          customName: saved.find(s => s.id === d.id)?.customName,
-          device: d,
-        }));
-        setDevices(restored);
-      } catch (err) {
-        console.warn("Failed to restore devices:", err);
-      }
-    };
-    restoreDevices();
-  }, []);
-
-  useEffect(() => {
-    const toStore = devices.map(d => ({ id: d.id, customName: d.customName }));
-    saveToStorage("devices", toStore);
-  }, [devices]);
 
   const requestDevice = useCallback(async () => {
     try {
