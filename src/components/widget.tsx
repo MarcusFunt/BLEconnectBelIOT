@@ -20,7 +20,16 @@ interface WidgetProps {
 
 export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
   const unit = getCharacteristicUnit(widget.dataType);
-  const { historyLength, lineColor, refreshRate } = widget.settings;
+  const {
+    historyLength,
+    lineColor,
+    refreshRate,
+    lineWidth = 2,
+    showDots = false,
+    showGrid = true,
+    yMin,
+    yMax,
+  } = widget.settings;
   const [displayData, setDisplayData] = useState<number | undefined>();
   const [history, setHistory] = useState<{ time: number; value: number }[]>([]);
   const lastUpdateRef = useRef(0);
@@ -112,14 +121,28 @@ export function Widget({ widget, data, deviceName, onRemove }: WidgetProps) {
           <div className="w-full h-40">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={history}>
-                <CartesianGrid strokeDasharray="3 3" />
+                {showGrid && <CartesianGrid strokeDasharray="3 3" />}
                 <XAxis dataKey="time" tickFormatter={t => new Date(t).toLocaleTimeString()} />
-                <YAxis unit={unit} />
+                <YAxis
+                  unit={unit}
+                  domain={
+                    yMin !== undefined || yMax !== undefined
+                      ? [yMin ?? 'auto', yMax ?? 'auto']
+                      : undefined
+                  }
+                />
                 <Tooltip
                   formatter={(value: number) => `${value.toFixed(1)}${unit}`}
                   labelFormatter={label => new Date(label).toLocaleTimeString()}
                 />
-                <Line type="monotone" dataKey="value" stroke={lineColor} dot={false} isAnimationActive={false} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke={lineColor}
+                  strokeWidth={lineWidth}
+                  dot={showDots}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>

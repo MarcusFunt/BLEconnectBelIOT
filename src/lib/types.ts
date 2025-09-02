@@ -37,6 +37,26 @@ export type Widget = {
     historyLength: number;
     lineColor: string;
     refreshRate: number;
+    /**
+     * Stroke width of the graph line in pixels.
+     */
+    lineWidth: number;
+    /**
+     * Whether to render points for each data sample.
+     */
+    showDots: boolean;
+    /**
+     * Toggle visibility of the chart grid.
+     */
+    showGrid: boolean;
+    /**
+     * Optional minimum value for the Y axis.
+     */
+    yMin?: number;
+    /**
+     * Optional maximum value for the Y axis.
+     */
+    yMax?: number;
   };
   /**
    * Optional log buffer storing all readings for export.
