@@ -7,10 +7,7 @@ export type Device = {
   rssi: number;
   connected: boolean;
   customName?: string;
-  /** Whether to attempt reconnection automatically on load */
-  autoConnect?: boolean;
-  /** Underlying Bluetooth device instance, when available */
-  device?: BluetoothDevice;
+  device: BluetoothDevice;
   /**
    * Map of supported characteristic UUIDs keyed by their UUID.
    * Populated when a device is connected and its services are discovered.
