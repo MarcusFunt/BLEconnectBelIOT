@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -37,6 +38,11 @@ const widgetFormSchema = z.object({
   type: z.enum(["value", "gauge", "graph"], { required_error: "Please select a widget type." }),
   historyLength: z.coerce.number().int().min(1, "History length must be at least 1."),
   lineColor: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Invalid color."),
+  lineWidth: z.coerce.number().int().min(1, "Line width must be at least 1."),
+  showDots: z.boolean(),
+  showGrid: z.boolean(),
+  yMin: z.preprocess(val => val === "" ? undefined : Number(val), z.number().optional()),
+  yMax: z.preprocess(val => val === "" ? undefined : Number(val), z.number().optional()),
   refreshRate: z.coerce.number().int().min(100, "Refresh rate must be at least 100ms."),
 });
 
@@ -52,6 +58,11 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
       type: "value",
       historyLength: 20,
       lineColor: "#8884d8",
+      lineWidth: 2,
+      showDots: false,
+      showGrid: true,
+      yMin: undefined,
+      yMax: undefined,
       refreshRate: 2000,
     },
   });
@@ -66,8 +77,21 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
   }, [selectedDeviceId, form]);
 
   function onSubmit(data: WidgetFormValues) {
-    const { historyLength, lineColor, refreshRate, ...rest } = data;
-    onAddWidget({ ...rest, settings: { historyLength, lineColor, refreshRate } });
+    const {
+      historyLength,
+      lineColor,
+      refreshRate,
+      lineWidth,
+      showDots,
+      showGrid,
+      yMin,
+      yMax,
+      ...rest
+    } = data;
+    onAddWidget({
+      ...rest,
+      settings: { historyLength, lineColor, refreshRate, lineWidth, showDots, showGrid, yMin, yMax },
+    });
     form.reset();
   }
 
@@ -213,6 +237,77 @@ export function AddWidgetSheet({ children, open, onOpenChange, onAddWidget, conn
                         <Input type="color" {...field} />
                       </FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lineWidth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Line Width</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="yMin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Y-Axis Min</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          value={field.value ?? ""}
+                          onChange={e => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="yMax"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Y-Axis Max</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          value={field.value ?? ""}
+                          onChange={e => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="showDots"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormLabel className="font-normal">Show Dots</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="showGrid"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormLabel className="font-normal">Show Grid</FormLabel>
                     </FormItem>
                   )}
                 />
