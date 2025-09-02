@@ -3,6 +3,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { Device, WidgetDataType } from '@/lib/types';
+import { loadFromStorage, saveToStorage } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import {
   parseCharacteristicValue,
@@ -12,6 +13,9 @@ import {
   isCompatibleManufacturerData,
 } from "@/lib/bluetooth";
 import { loadFromStorage, saveToStorage } from "@/lib/utils";
+
+type StoredDevice = Pick<Device, 'id' | 'name' | 'customName'>;
+const DEVICE_STORAGE_KEY = 'devices';
 
 export function useBluetooth() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -258,6 +262,52 @@ export function useBluetooth() {
       prev.map(d => (d.id === deviceId ? { ...d, customName: newName } : d))
     );
   }, []);
+
+  // Load saved devices on mount
+  useEffect(() => {
+    const loadDevices = async () => {
+      if (typeof navigator === 'undefined' || !(navigator as any).bluetooth?.getDevices) return;
+      const saved = loadFromStorage<StoredDevice[]>(DEVICE_STORAGE_KEY, []);
+      try {
+        const permitted: BluetoothDevice[] = await (navigator as any).bluetooth.getDevices();
+        const restored: Device[] = [];
+        for (const bleDevice of permitted) {
+          const meta = saved.find(d => d.id === bleDevice.id);
+          if (!meta) continue;
+          try {
+            await bleDevice.watchAdvertisements();
+            bleDevice.addEventListener('advertisementreceived', (event: any) => {
+              if (typeof event.rssi === 'number') {
+                setDevices(prev =>
+                  prev.map(d => (d.id === bleDevice.id ? { ...d, rssi: event.rssi } : d))
+                );
+              }
+            });
+          } catch (err) {
+            console.warn('Advertisement watching not supported:', err);
+          }
+          restored.push({
+            id: bleDevice.id,
+            name: meta.name || bleDevice.name || 'Unknown Device',
+            customName: meta.customName,
+            rssi: 0,
+            connected: false,
+            device: bleDevice,
+          });
+        }
+        if (restored.length) setDevices(restored);
+      } catch (err) {
+        console.warn('Failed to restore devices:', err);
+      }
+    };
+    loadDevices();
+  }, []);
+
+  // Persist device list
+  useEffect(() => {
+    const toStore: StoredDevice[] = devices.map(({ id, name, customName }) => ({ id, name, customName }));
+    saveToStorage(DEVICE_STORAGE_KEY, toStore);
+  }, [devices]);
 
   return {
     devices,
