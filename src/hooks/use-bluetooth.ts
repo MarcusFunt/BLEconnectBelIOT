@@ -1,9 +1,10 @@
 
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Device, WidgetDataType } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
+import { loadFromStorage, saveToStorage } from "@/lib/utils";
 import {
   parseCharacteristicValue,
   COMPATIBLE_MANUFACTURER_ID,
@@ -15,6 +16,55 @@ import {
 export function useBluetooth() {
   const [devices, setDevices] = useState<Device[]>([]);
   const { toast } = useToast();
+
+  type StoredDevice = Pick<Device, 'id' | 'name' | 'customName'>;
+
+  useEffect(() => {
+    async function restoreDevices() {
+      const stored = loadFromStorage<StoredDevice[]>("devices", []);
+      if (stored.length === 0) return;
+      if (typeof navigator === 'undefined' || !(navigator as any).bluetooth?.getDevices) {
+        return;
+      }
+      try {
+        const bleDevices: BluetoothDevice[] = await (navigator as any).bluetooth.getDevices();
+        const restored: Device[] = [];
+        for (const sd of stored) {
+          const ble = bleDevices.find(d => d.id === sd.id);
+          if (!ble) continue;
+          try {
+            await ble.watchAdvertisements?.();
+            ble.addEventListener('advertisementreceived', (event: any) => {
+              if (typeof event.rssi === 'number') {
+                setDevices(prev => prev.map(d => d.id === ble.id ? { ...d, rssi: event.rssi } : d));
+              }
+            });
+          } catch (err) {
+            console.warn('Advertisement watching not supported:', err);
+          }
+          restored.push({
+            id: ble.id,
+            name: ble.name || sd.name,
+            customName: sd.customName,
+            rssi: 0,
+            connected: false,
+            device: ble,
+          });
+        }
+        if (restored.length) {
+          setDevices(restored);
+        }
+      } catch (err) {
+        console.warn('Failed to restore devices:', err);
+      }
+    }
+    restoreDevices();
+  }, []);
+
+  useEffect(() => {
+    const toStore: StoredDevice[] = devices.map(({ id, name, customName }) => ({ id, name, customName }));
+    saveToStorage("devices", toStore);
+  }, [devices]);
 
   const requestDevice = useCallback(async () => {
     try {
