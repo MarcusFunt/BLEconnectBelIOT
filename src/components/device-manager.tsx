@@ -7,18 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Bluetooth, BluetoothConnected, Edit, Check, X, Signal, Rss } from "lucide-react";
 
 interface DeviceManagerProps {
   devices: Device[];
   onConnectToggle: (deviceId: string) => void;
   onRenameDevice: (deviceId: string, newName: string) => void;
-  onAutoConnectChange: (deviceId: string, value: boolean) => void;
   onScan: () => void;
 }
 
-export function DeviceManager({ devices, onConnectToggle, onRenameDevice, onAutoConnectChange, onScan }: DeviceManagerProps) {
+export function DeviceManager({ devices, onConnectToggle, onRenameDevice, onScan }: DeviceManagerProps) {
   const [editingDeviceId, setEditingDeviceId] = React.useState<string | null>(null);
   const [tempName, setTempName] = React.useState("");
 
@@ -95,11 +93,6 @@ export function DeviceManager({ devices, onConnectToggle, onRenameDevice, onAuto
                                         {getRssiIcon(device.rssi)}
                                         {device.rssi}
                                     </Badge>
-                                    <Switch
-                                      checked={device.autoConnect ?? false}
-                                      onCheckedChange={checked => onAutoConnectChange(device.id, checked)}
-                                      aria-label="Auto connect"
-                                    />
                                     {device.connected && (
                                         <Button size="icon" variant="ghost" className="w-7 h-7" onClick={() => handleEditStart(device)}><Edit className="w-4 h-4" /></Button>
                                     )}

@@ -26,7 +26,6 @@ export default function Home() {
       disconnectDevice,
       renameDevice,
       readCharacteristicValue,
-      toggleAutoConnect,
     } = useBluetooth();
 
   const [widgets, setWidgets] = React.useState<Widget[]>([]);
@@ -102,10 +101,6 @@ export default function Home() {
     renameDevice(deviceId, newName);
   };
 
-  const handleAutoConnectChange = (deviceId: string, value: boolean) => {
-    toggleAutoConnect(deviceId, value);
-  };
-
   const handleAddWidget = (widget: Omit<Widget, 'id'>) => {
     setWidgets(prevWidgets => [...prevWidgets, { ...widget, id: `widget-${Date.now()}` }]);
     setIsAddWidgetSheetOpen(false);
@@ -146,7 +141,6 @@ export default function Home() {
               devices={devices}
               onConnectToggle={handleConnectToggle}
               onRenameDevice={handleRenameDevice}
-              onAutoConnectChange={handleAutoConnectChange}
               onScan={requestDevice}
           />
         </DialogContent>
