@@ -5,7 +5,7 @@ import * as React from "react";
 import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar";
 import { DeviceManager } from "@/components/device-manager";
 import { Dashboard } from "@/components/dashboard";
-import type { Device, Widget } from "@/lib/types";
+import type { Widget } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -43,48 +43,51 @@ export default function Home() {
     saveToStorage("widgets", widgets);
   }, [widgets]);
 
-    const readValues = React.useCallback(
-      async (targets: Device[] = connectedDevices) => {
-        const devicePromises = targets.map(async device => {
-          const deviceWidgets = widgets.filter(w => w.deviceId === device.id);
-          const values: Record<string, number> = {};
-
-          const characteristicPromises = deviceWidgets.map(async widget => {
-            const value = await readCharacteristicValue(device.id, widget.dataType);
-            if (value !== null) {
-              values[widget.dataType] = value;
-            }
-          });
-
-          await Promise.all(characteristicPromises);
-
-          if (Object.keys(values).length) {
-            setData(prev => ({
-              ...prev,
-              [device.id]: { ...(prev[device.id] ?? {}), ...values },
-            }));
-          }
-        });
-
-        await Promise.all(devicePromises);
-      },
-      [connectedDevices, widgets, readCharacteristicValue]
-    );
+  React.useEffect(() => {
+    connectedDevices.forEach(device => {
+      const deviceWidgets = widgets.filter(w => w.deviceId === device.id);
+      const values: Record<string, number> = {};
+      deviceWidgets.forEach(widget => {
+        const latest = device.latestValues?.[widget.dataType];
+        if (latest !== undefined) {
+          values[widget.dataType] = latest;
+        }
+      });
+      if (Object.keys(values).length) {
+        setData(prev => ({
+          ...prev,
+          [device.id]: { ...(prev[device.id] ?? {}), ...values },
+        }));
+      }
+    });
+  }, [connectedDevices, widgets]);
 
   React.useEffect(() => {
-    const timers = connectedDevices.map(device =>
-      setInterval(() => {
-        readValues([device]);
-      }, 2000)
-    );
-
-    // In a production application, characteristic notifications could
-    // replace polling or the interval durations could vary per device.
-
-    return () => {
-      timers.forEach(clearInterval);
-    };
-  }, [connectedDevices, readValues]);
+    const intervals: number[] = [];
+    widgets.forEach(widget => {
+      const device = connectedDevices.find(d => d.id === widget.deviceId);
+      if (!device) return;
+      const characteristic: any = device.characteristics?.[widget.dataType];
+      const props = characteristic?.properties;
+      const poll = async () => {
+        const value = await readCharacteristicValue(device.id, widget.dataType);
+        if (value !== null) {
+          setData(prev => ({
+            ...prev,
+            [device.id]: { ...(prev[device.id] ?? {}), [widget.dataType]: value },
+          }));
+        }
+      };
+      if (props?.notify || props?.indicate) {
+        poll();
+        return;
+      }
+      poll();
+      const id = window.setInterval(poll, widget.settings.refreshRate);
+      intervals.push(id);
+    });
+    return () => intervals.forEach(clearInterval);
+  }, [widgets, connectedDevices, readCharacteristicValue]);
 
   const handleConnectToggle = (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);
